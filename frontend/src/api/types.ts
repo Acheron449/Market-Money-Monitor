@@ -68,6 +68,40 @@ export interface Watchlist {
   tickers: string[];
 }
 
+export interface CrossCheckSummary {
+  at: string | null;
+  provider: string | null;
+  checked: number;
+  discrepancies: number;
+  status: string;
+}
+
+export interface BulkLoadSummary {
+  at: string | null;
+  rows: number;
+  status: string;
+}
+
+export interface Discrepancy {
+  id: number;
+  checkedAt: string;
+  symbol: string;
+  accessionNo: string;
+  lineNo: number;
+  field: "shares" | "value";
+  primaryValue: number | null;
+  secondaryValue: number | null;
+  differencePct: number;
+  provider: string;
+}
+
+export interface DataQuality {
+  crossCheck: CrossCheckSummary;
+  bulkInsider: BulkLoadSummary;
+  bulk13f: BulkLoadSummary;
+  discrepancies: Discrepancy[];
+}
+
 export interface Alert {
   id: number;
   kind: string;

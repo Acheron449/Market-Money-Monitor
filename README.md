@@ -50,6 +50,22 @@ consecutive failures, half-open after five minutes), every chain falls back in c
 every stored row records its `source`. If all providers fail, read endpoints keep serving last-good
 data with a stale flag.
 
+## SEC bulk backfill
+
+Historical SEC data sets are loaded from a local ZIP archive or an extracted directory; no provider
+credentials or network calls are involved. Both commands accept `--symbols` to restrict the load
+and `--database-url` to override `DATABASE_URL`.
+
+```bash
+cd backend
+uv run python scripts/load_sec_bulk.py insider --path /data/insider_transactions.zip
+uv run python scripts/load_sec_bulk.py 13f --path /data/form_13f.zip \
+  --cusip-map /data/cusip-map.csv
+```
+
+The 13F loader resolves issuers by CUSIP when a `cusip,symbol` map is supplied and otherwise falls
+back to the stored company name. `GET /api/holders/{ticker}` returns the latest report period only.
+
 ## API
 
 | Method | Path | Purpose |
@@ -60,6 +76,7 @@ data with a stale flag.
 | POST | `/api/refresh` | Immediate run, 202, throttled to once per 30 s |
 | GET, PUT | `/api/watchlist` | Read or replace the watchlist (PUT needs the admin token) |
 | GET | `/api/alerts` | Recent deduplicated ADM-03 alert history |
+| GET | `/api/data-quality` | Insider cross-check and SEC bulk-load status |
 | GET | `/healthz`, `/readyz`, `/metrics` | Health, readiness, Prometheus |
 
 Response shapes are the TypeScript types in `docs/SRS.md` §7.2, mirrored in
@@ -87,7 +104,8 @@ opt-in.
   axe review pending.
 - **P5** — SSE quote stream and new-filing toasts, watchlist API and editor, cluster-buy flag
   and 10b5-1 badge with exclusion toggle, alerts to email/Telegram/webhook with persisted
-  history: done. SEC 13F data sets and insider cross-check: not started.
+  history, SEC insider/13F bulk backfills, and the daily second-provider insider cross-check:
+  done.
 - **P6** — load/failure tests, deployment: not started.
 
 UI-14 is descoped for v1.0: the Advanced Charts licence fails for a personal dashboard in a public

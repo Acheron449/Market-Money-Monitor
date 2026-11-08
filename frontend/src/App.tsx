@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 
 import { api } from "./api/client";
 import { AlertsPanel } from "./components/AlertsPanel";
+import { DataQualityPanel } from "./components/DataQualityPanel";
 import { FilingToasts } from "./components/FilingToasts";
 import { Footer } from "./components/Footer";
 import { FreshnessBar } from "./components/FreshnessBar";
@@ -14,6 +15,7 @@ import { SignalTiles } from "./components/SignalTiles";
 import { DashboardSkeleton, ErrorState } from "./components/States";
 import { WatchlistEditor } from "./components/WatchlistEditor";
 import { useAlerts } from "./hooks/useAlerts";
+import { useDataQuality } from "./hooks/useDataQuality";
 import { useDashboard, useHistory, useHolders } from "./hooks/useMarketData";
 import { useQuoteStream } from "./hooks/useQuoteStream";
 
@@ -26,7 +28,9 @@ export function App() {
   const [filter, setFilter] = useState<TapeFilter>("all");
   const [editingWatchlist, setEditingWatchlist] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const [dataQualityOpen, setDataQualityOpen] = useState(false);
   const alerts = useAlerts();
+  const dataQuality = useDataQuality();
 
   const signals = useMemo(() => dashboard.data?.signals ?? [], [dashboard.data]);
   const activeTicker = useMemo(() => {
@@ -77,9 +81,11 @@ export function App() {
         editingWatchlist={editingWatchlist}
         alertsOpen={alertsOpen}
         alertsCount={alerts.data?.length ?? 0}
+        dataQualityOpen={dataQualityOpen}
         onRefresh={() => refresh.mutate()}
         onEditWatchlist={() => setEditingWatchlist((open) => !open)}
         onToggleAlerts={() => setAlertsOpen((open) => !open)}
+        onToggleDataQuality={() => setDataQualityOpen((open) => !open)}
       />
 
       <div className="mt-4">
@@ -97,6 +103,22 @@ export function App() {
           error={alerts.isError ? (alerts.error instanceof Error ? alerts.error.message : "Could not load alerts.") : null}
           onRetry={() => void alerts.refetch()}
           onClose={() => setAlertsOpen(false)}
+        />
+      ) : null}
+
+      {dataQualityOpen ? (
+        <DataQualityPanel
+          data={dataQuality.data}
+          loading={dataQuality.isLoading}
+          error={
+            dataQuality.isError
+              ? dataQuality.error instanceof Error
+                ? dataQuality.error.message
+                : "Could not load data quality."
+              : null
+          }
+          onRetry={() => void dataQuality.refetch()}
+          onClose={() => setDataQualityOpen(false)}
         />
       ) : null}
 

@@ -10,7 +10,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import alerts, dashboard, errors, health, history, holders, refresh, stream, watchlist
+from app.api import (
+    alerts,
+    dashboard,
+    data_quality,
+    errors,
+    health,
+    history,
+    holders,
+    refresh,
+    stream,
+    watchlist,
+)
 from app.config import Settings, get_settings, load_runtime_config
 from app.core.errors import ProviderError
 from app.core.logging import configure_logging
@@ -49,7 +60,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["Authorization", "Content-Type"],
     )
 
-    for module in (alerts, dashboard, history, holders, refresh, watchlist, health, stream):
+    for module in (
+        alerts,
+        dashboard,
+        data_quality,
+        history,
+        holders,
+        refresh,
+        watchlist,
+        health,
+        stream,
+    ):
         app.include_router(module.router)
     errors.register(app)
 

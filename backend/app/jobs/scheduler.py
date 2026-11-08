@@ -10,7 +10,14 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
 
 from app.core.calendar import ET, is_evening, is_market_open, is_trading_day
-from app.jobs.runner import run_bars, run_form4, run_holders, run_quotes, run_ticker_map
+from app.jobs.runner import (
+    run_bars,
+    run_cross_check,
+    run_form4,
+    run_holders,
+    run_quotes,
+    run_ticker_map,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -76,6 +83,14 @@ def build_scheduler(app: FastAPI) -> AsyncIOScheduler:
         CronTrigger(hour=6, minute=0, timezone=ET),
         args=[app],
         id="holders",
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        run_cross_check,
+        CronTrigger(hour=6, minute=15, timezone=ET),
+        args=[app],
+        id="cross_check",
         max_instances=1,
         coalesce=True,
     )

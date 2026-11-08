@@ -26,6 +26,15 @@ function writeQuote(symbol: string, price: number, changePct: number): void {
   });
 }
 
+function loadDataQualityFixtures(): void {
+  execFileSync("uv", ["run", "python", "scripts/e2e_data_quality.py"], {
+    cwd: BACKEND,
+    env: { ...process.env, DATABASE_URL: "sqlite+aiosqlite:///./e2e.db" },
+    timeout: 30_000,
+    stdio: "pipe",
+  });
+}
+
 function insertFiling(): void {
   execFileSync("uv", ["run", "python", "scripts/e2e_new_filing.py"], {
     cwd: BACKEND,
@@ -488,4 +497,33 @@ test("toasts a new Form 4 and refreshes the tape", async ({ page }) => {
   await expect(toast).toHaveCount(0);
 
   expect(errors, "console, page or same-origin network errors").toEqual([]);
+});
+
+test("shows SEC 13F backfill and insider cross-check discrepancies", async ({ page }) => {
+  const errors = collectErrors(page);
+  await openDashboard(page);
+
+  loadDataQualityFixtures();
+  await page.reload();
+
+  await expect(page.getByText("BULK 13F CAPITAL LLC")).toBeVisible();
+  await expect(page.getByTestId("holder-row")).toHaveCount(6);
+
+  await page.getByTestId("data-quality-toggle").click();
+  const panel = page.getByTestId("data-quality-panel");
+  await expect(panel).toBeVisible();
+  await expect(panel.getByTestId("cross-check-summary")).toContainText("fixture_secondary");
+  await expect(panel.getByTestId("cross-check-summary")).toContainText("2 discrepancies");
+  await expect(panel.getByTestId("bulk-13f-summary")).toContainText("2 rows loaded");
+  await expect(panel.getByTestId("discrepancy-row")).toHaveCount(2);
+  await expect(panel.getByText("Sh", { exact: true })).toHaveCount(0);
+  await expect(panel.getByText("Shares", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Value", { exact: true })).toBeVisible();
+  await expect(panel.getByText("20.0%").first()).toBeVisible();
+
+  // The reload above deliberately tears down the open SSE stream.
+  const unexpected = errors.filter(
+    (error) => !(error.includes("/api/stream") && error.includes("net::ERR_ABORTED")),
+  );
+  expect(unexpected, "unexpected console, page or same-origin network errors").toEqual([]);
 });

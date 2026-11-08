@@ -106,6 +106,13 @@ Priority: **M** = must (v1.0), **S** = should (v1.x), **C** = could.
 | ING-12 | SEC bulk data sets (Insider Transactions, Form 13F) shall be loadable for historical backfill | S |
 | ING-13 | A CLI shall allow manual runs, e.g. smm ingest --job form4 --ticker NVDA --since 2026-05-01 | C |
 
+ING-11 is implemented by a daily 06:15 ET job that fetches the same window from a provider that did
+not produce the stored rows, matches filings by accession/line or (date, owner, code), and records
+each shares or value difference strictly above 1% in `cross_check_discrepancy`. ING-12 is
+implemented by `backend/scripts/load_sec_bulk.py`, which reads the official ZIP archives (or an
+extracted directory) for Insider Transactions and Form 13F. The 13F loader resolves CUSIPs through
+an optional `cusip,symbol` CSV and otherwise falls back to a normalised issuer-name match.
+
 ### 5.2 Classification and signals (SIG)
 
 | ID | Requirement | Pri |
@@ -159,6 +166,7 @@ Priority: **M** = must (v1.0), **S** = should (v1.x), **C** = could.
 | Form 4 poll | every 5 min | every 5 min until 22:00 ET on weekdays, hourly otherwise |
 | Daily bars | gap-fill at start-up | 16:30 ET each trading day |
 | 13F holders | daily check, hourly during the weeks around each quarterly filing deadline | same |
+| Insider cross-check | 06:15 ET daily | same |
 | Signals | event-driven after insider ingest | same |
 | Ticker/CIK map | weekly | weekly |
 | Provider health ping | every minute | every 5 min |
@@ -185,6 +193,7 @@ Priority: **M** = must (v1.0), **S** = should (v1.x), **C** = could.
 | holder | (symbol, report\_period, institution\_cik) PK; institution, shares, value, prev\_shares, qoq\_change\_pct, rank, source |
 | signal\_snapshot | (symbol, as\_of, lookback\_months) PK; net\_value, buy\_value, sell\_value, txn\_count, starred\_count |
 | alert\_event | id, dedupe\_key (unique), kind, symbol, title, body, channels, status, created\_at |
+| cross\_check\_discrepancy | id, run\_id, checked\_at, symbol, accession\_no, line\_no, field, primary\_value, secondary\_value, difference\_pct, provider |
 | ingest\_run | id, job, provider, started\_at, finished\_at, status, rows, error |
 
 Money is handled as Decimal in the back-end and serialised as JSON numbers. All timestamps are stored in UTC; trading dates are in America/New\_York.
@@ -218,11 +227,12 @@ Paths match the example so its front-end works unchanged; items marked new are a
 | --- | --- | --- |
 | GET | /api/dashboard | Signals, quotes, tape, lookbackMonths, latestFilingDate, generatedAt and freshness (new); optional `exclude10b5_1=true` for SIG-10 |
 | GET | /api/history/{ticker} | Daily closes, default range 6 months |
-| GET | /api/holders/{ticker} | Top holders, default limit 10 |
+| GET | /api/holders/{ticker} | Top holders for the latest report period, default limit 10 |
 | POST | /api/refresh | Trigger an immediate refresh; 202 with job id; throttled |
 | GET | /api/stream | SSE quote ticks with 20 s heartbeat (new) |
 | GET, PUT | /api/watchlist | Read or replace the watchlist; validates ticker and resolves CIK; admin (new) |
 | GET | /api/alerts | Recent ADM-03 alert history, newest first; `limit` 1–100 (new) |
+| GET | /api/data-quality | Latest cross-check/bulk-run summaries and recent discrepancies; `limit` 1–100 (new) |
 | GET | /healthz, /readyz, /metrics | Liveness, readiness, Prometheus metrics (new) |
 
 ### 7.2 Response shapes
@@ -235,6 +245,10 @@ type Txn = { key: string; ticker: string; date: string; name: string; role: stri
 type History = { date: string; close: number }[]
 type Holder = { rank: number; institution: string; shares: number; value: number; qoqChangePct: number | null; reportPeriod?: string }
 type Alert = { id: number; kind: 'ceo_cfo_buy' | 'large_transaction' | 'net_crossing' | 'cluster_buy'; symbol: string; title: string; body: string; createdAt: string; channels: string[]; status: 'recorded' | 'delivered' | 'partial' | 'failed' }
+type BulkLoadSummary = { at: string | null; rows: number; status: 'never' | 'running' | 'ok' | 'error' }
+type CrossCheckSummary = { at: string | null; provider: string | null; checked: number; discrepancies: number; status: 'never' | 'running' | 'ok' | 'error' }
+type Discrepancy = { id: number; checkedAt: string; symbol: string; accessionNo: string; lineNo: number; field: 'shares' | 'value'; primaryValue: number | null; secondaryValue: number | null; differencePct: number; provider: string }
+type DataQuality = { crossCheck: CrossCheckSummary; bulkInsider: BulkLoadSummary; bulk13f: BulkLoadSummary; discrepancies: Discrepancy[] }
 ```
 
 ### 7.3 Error handling
@@ -289,6 +303,7 @@ Errors use a JSON body with code and message. A failed provider never produces a
 | AC-07 | Automated accessibility scan reports zero serious violations |
 | AC-08 | Unit tests prove: net = buys − sells; awards, gifts and withholdings excluded; starred only for CEO/CFO buys; tint follows sign |
 | AC-09 | Each ADM-03 trigger creates one deduplicated alert; configured channels receive it and failures do not fail ingestion |
+| AC-10 | The bulk loaders import local Insider Transactions and Form 13F archives idempotently, and the daily cross-check persists and logs only shares/value differences above 1% |
 
 ## Appendix A. Findings from the example build
 

@@ -8,9 +8,11 @@ interface HeaderProps {
   editingWatchlist: boolean;
   alertsOpen: boolean;
   alertsCount: number;
+  dataQualityOpen: boolean;
   onRefresh: () => void;
   onEditWatchlist: () => void;
   onToggleAlerts: () => void;
+  onToggleDataQuality: () => void;
 }
 
 const STREAM_LABEL: Record<StreamStatus, string> = {
@@ -26,9 +28,11 @@ export function Header({
   editingWatchlist,
   alertsOpen,
   alertsCount,
+  dataQualityOpen,
   onRefresh,
   onEditWatchlist,
   onToggleAlerts,
+  onToggleDataQuality,
 }: HeaderProps) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-5">
@@ -91,6 +95,19 @@ export function Header({
               {alertsCount}
             </span>
           ) : null}
+        </button>
+        <button
+          type="button"
+          onClick={onToggleDataQuality}
+          aria-expanded={dataQualityOpen}
+          aria-controls="data-quality-panel"
+          data-testid="data-quality-toggle"
+          className="inline-flex items-center gap-2 rounded-lg border border-line bg-card px-3.5 py-2 text-sm font-medium text-fg transition hover:border-champagne/50 hover:text-champagne"
+        >
+          <span aria-hidden="true" className="text-champagne">
+            ◫
+          </span>
+          Data quality
         </button>
         <button
           type="button"

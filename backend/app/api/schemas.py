@@ -87,6 +87,40 @@ class WatchlistIn(BaseModel):
     tickers: list[str]
 
 
+class CrossCheckSummaryOut(BaseModel):
+    at: str | None
+    provider: str | None
+    checked: int
+    discrepancies: int
+    status: str
+
+
+class BulkLoadSummaryOut(BaseModel):
+    at: str | None
+    rows: int
+    status: str
+
+
+class DiscrepancyOut(BaseModel):
+    id: int
+    checkedAt: str
+    symbol: str
+    accessionNo: str
+    lineNo: int
+    field: str
+    primaryValue: float | None
+    secondaryValue: float | None
+    differencePct: float
+    provider: str
+
+
+class DataQualityOut(BaseModel):
+    crossCheck: CrossCheckSummaryOut
+    bulkInsider: BulkLoadSummaryOut
+    bulk13f: BulkLoadSummaryOut
+    discrepancies: list[DiscrepancyOut]
+
+
 class AlertOut(BaseModel):
     id: int
     kind: str

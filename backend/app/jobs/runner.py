@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import FastAPI
+from sqlalchemy import select
 
 from app.core.errors import ProviderError
+from app.db.models import InsiderTxn
 from app.providers.registry import ProviderRegistry
 from app.services.alerts import emit_ingest_alerts
+from app.services.cross_check import cross_check_insiders
 from app.services.ingest import (
     active_tickers,
     bars_gap_start,
@@ -25,7 +28,14 @@ from app.services.ingest import (
 from app.services.signals import shift_months
 
 LOGGER = logging.getLogger(__name__)
-TIMEOUTS = {"quotes": 120, "form4": 900, "bars": 300, "holders": 300, "ticker_map": 120}
+TIMEOUTS = {
+    "quotes": 120,
+    "form4": 900,
+    "bars": 300,
+    "holders": 300,
+    "ticker_map": 120,
+    "cross_check": 300,
+}
 
 
 def _registry(app: FastAPI) -> ProviderRegistry:
@@ -152,6 +162,37 @@ async def run_ticker_map(app: FastAPI) -> None:
             LOGGER.warning("ticker map failed", extra={"job": "ticker_map", "error": str(exc)})
         finally:
             await release(session, "ticker_map")
+
+
+async def run_cross_check(app: FastAPI) -> None:
+    """Daily ING-11 cross-check against a provider that did not write the primary rows."""
+
+    from app.jobs.lock import acquire, release
+
+    async with app.state.db.session() as session:
+        if not await acquire(session, "cross_check", ttl_seconds=TIMEOUTS["cross_check"]):
+            return
+        try:
+            providers = _registry(app).insiders
+            if len(providers) < 2:
+                LOGGER.info("cross-check skipped: fewer than two insider providers")
+                return
+            sources = set(await session.scalars(select(InsiderTxn.source).distinct()))
+            secondary = next(
+                (provider for provider in providers if provider.name not in sources),
+                None,
+            )
+            if secondary is None:
+                LOGGER.info("cross-check skipped: no independent insider provider")
+                return
+            await cross_check_insiders(
+                session,
+                secondary,
+                since=date.today() - timedelta(days=30),
+                tickers=await active_tickers(session),
+            )
+        finally:
+            await release(session, "cross_check")
 
 
 async def run_full_refresh(app: FastAPI) -> None:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session
@@ -25,8 +25,16 @@ async def holders(
     if exists is None:
         raise ApiError(404, "unknown_ticker", f"{symbol} is not in the watchlist")
 
+    latest = await session.scalar(
+        select(func.max(Holder.report_period)).where(Holder.symbol == symbol)
+    )
+    if latest is None:
+        return []
     rows = await session.scalars(
-        select(Holder).where(Holder.symbol == symbol).order_by(Holder.rank).limit(limit)
+        select(Holder)
+        .where(Holder.symbol == symbol, Holder.report_period == latest)
+        .order_by(Holder.rank)
+        .limit(limit)
     )
     return [
         HolderOut(

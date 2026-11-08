@@ -130,6 +130,24 @@ class AlertEvent(Base):
     )
 
 
+class CrossCheckDiscrepancy(Base):
+    __tablename__ = "cross_check_discrepancy"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int | None] = mapped_column(ForeignKey("ingest_run.id"), index=True)
+    checked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), index=True, nullable=False
+    )
+    symbol: Mapped[str] = mapped_column(ForeignKey("ticker.symbol"), index=True, nullable=False)
+    accession_no: Mapped[str] = mapped_column(String(32), nullable=False)
+    line_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    field: Mapped[str] = mapped_column(String(16), nullable=False)
+    primary_value: Mapped[Decimal | None] = mapped_column(MONEY)
+    secondary_value: Mapped[Decimal | None] = mapped_column(MONEY)
+    difference_pct: Mapped[Decimal] = mapped_column(PERCENT, nullable=False)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
 class IngestRun(Base):
     __tablename__ = "ingest_run"
 
