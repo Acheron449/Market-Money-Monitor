@@ -11,10 +11,12 @@ import { PriceChart } from "./components/PriceChart";
 import { SignalTiles } from "./components/SignalTiles";
 import { DashboardSkeleton, ErrorState } from "./components/States";
 import { useDashboard, useHistory, useHolders } from "./hooks/useMarketData";
+import { useQuoteStream } from "./hooks/useQuoteStream";
 
 export function App() {
   const queryClient = useQueryClient();
   const dashboard = useDashboard();
+  const streamStatus = useQuoteStream(dashboard.isSuccess);
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState<TapeFilter>("all");
 
@@ -63,6 +65,7 @@ export function App() {
       <Header
         latestFilingDate={data.latestFilingDate}
         refreshing={refresh.isPending}
+        streamStatus={streamStatus}
         onRefresh={() => refresh.mutate()}
       />
 

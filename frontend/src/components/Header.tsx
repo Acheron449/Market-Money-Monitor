@@ -1,12 +1,20 @@
+import type { StreamStatus } from "../hooks/useQuoteStream";
 import { relativeDays } from "../lib/format";
 
 interface HeaderProps {
   latestFilingDate: string | null;
   refreshing: boolean;
+  streamStatus: StreamStatus;
   onRefresh: () => void;
 }
 
-export function Header({ latestFilingDate, refreshing, onRefresh }: HeaderProps) {
+const STREAM_LABEL: Record<StreamStatus, string> = {
+  connecting: "Connecting…",
+  live: "Live quotes",
+  polling: "Polling 15s",
+};
+
+export function Header({ latestFilingDate, refreshing, streamStatus, onRefresh }: HeaderProps) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-5">
       <div className="flex items-center gap-4">
@@ -24,7 +32,27 @@ export function Header({ latestFilingDate, refreshing, onRefresh }: HeaderProps)
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <span
+          data-testid="stream-status"
+          data-status={streamStatus}
+          title={
+            streamStatus === "live"
+              ? "Quote ticks are streaming"
+              : streamStatus === "polling"
+                ? "Stream unavailable; refreshing quotes every 15 seconds"
+                : "Opening the quote stream"
+          }
+          className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs text-muted"
+        >
+          <span
+            aria-hidden="true"
+            className={`h-1.5 w-1.5 rounded-full ${
+              streamStatus === "live" ? "bg-buy" : "bg-champagne"
+            }`}
+          />
+          {STREAM_LABEL[streamStatus]}
+        </span>
         <p className="text-sm text-muted" data-testid="filing-lag">
           Latest filing <span className="text-fg">{relativeDays(latestFilingDate)}</span>
         </p>

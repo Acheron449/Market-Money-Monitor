@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     providers_enabled: bool = True
     refresh_throttle_seconds: int = 30
     quote_stale_seconds: int = 60
+    # AUT-03: SSE cadence. Polling is a store read, never a provider call.
+    stream_poll_seconds: float = 1.0
+    stream_heartbeat_seconds: float = 20.0
     scheduler_enabled: bool = True
 
     @property

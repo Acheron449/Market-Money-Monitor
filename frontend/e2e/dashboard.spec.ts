@@ -1,9 +1,30 @@
 import { expect, test, type Page } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
 const SHOTS = path.join(process.cwd(), "e2e", "screenshots");
+const BACKEND = path.join(process.cwd(), "..", "backend");
 const IGNORED_NETWORK = /fonts\.(googleapis|gstatic)\.com/;
+
+/** Mutate the seeded quote row so the SSE stream has a real tick to publish. */
+function writeQuote(symbol: string, price: number, changePct: number): void {
+  const script = [
+    "import datetime, sqlite3",
+    "connection = sqlite3.connect('e2e.db', timeout=10)",
+    "connection.execute(",
+    '    "UPDATE quote SET price = ?, change_pct = ?, as_of = ? WHERE symbol = ?",',
+    `    (${price}, ${changePct}, datetime.datetime.now(datetime.UTC).replace(tzinfo=None).isoformat(sep=" "), "${symbol}"),`,
+    ")",
+    "connection.commit()",
+    "connection.close()",
+  ].join("\n");
+  execFileSync("uv", ["run", "python", "-c", script], {
+    cwd: BACKEND,
+    timeout: 30_000,
+    stdio: "pipe",
+  });
+}
 
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -201,6 +222,32 @@ test("empty holders state renders", async ({ page }) => {
   );
   await openDashboard(page);
   await expect(page.getByText("No 13F holdings reported for this ticker yet.")).toBeVisible();
+});
+
+test("streams live quote ticks and falls back to polling", async ({ page }) => {
+  await openDashboard(page);
+  const status = page.getByTestId("stream-status");
+  await expect(status).toHaveAttribute("data-status", "live");
+  await expect(status).toContainText("Live quotes");
+
+  const coin = page.locator('[data-testid="tile"][data-ticker="COIN"]');
+  try {
+    writeQuote("COIN", 299.99, -1.23);
+    await expect(coin).toContainText("-1.23%");
+  } finally {
+    writeQuote("COIN", 310.2, -0.65);
+  }
+
+  await page.route("**/api/stream", (route) => route.abort());
+  let dashboardCalls = 0;
+  page.on("response", (response) => {
+    if (response.url().includes("/api/dashboard")) dashboardCalls += 1;
+  });
+  await page.reload();
+  await expect(status).toHaveAttribute("data-status", "polling");
+  await expect(page.getByTestId("tile")).toHaveCount(8);
+  // Reload fetch, the immediate fallback poll, then the 15 s interval poll.
+  await expect.poll(() => dashboardCalls, { timeout: 30_000 }).toBeGreaterThanOrEqual(3);
 });
 
 test("no horizontal overflow at 360, 768 and 1440", async ({ page }) => {

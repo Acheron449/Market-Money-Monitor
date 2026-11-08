@@ -63,6 +63,11 @@ class HolderOut(BaseModel):
     reportPeriod: str
 
 
+class StreamQuotesOut(BaseModel):
+    quotes: dict[str, QuoteOut]
+    generatedAt: str
+
+
 class RefreshOut(BaseModel):
     jobId: str
     status: str

@@ -106,7 +106,8 @@ async def ingest_quotes(
                 await _merge_quote(session, row)
             run.rows = len(rows)
         return len(rows)
-    raise ProviderError("all quote providers failed: " + "; ".join(errors))
+    detail = "; ".join(errors) or "no providers configured"
+    raise ProviderError(f"all quote providers failed: {detail}")
 
 
 async def _merge_quote(session: AsyncSession, row: QuoteData) -> None:
@@ -144,7 +145,8 @@ async def ingest_bars(
                 await _merge_bar(session, row)
             run.rows = len(rows)
         return len(rows)
-    raise ProviderError(f"{symbol}: all bar providers failed: " + "; ".join(errors))
+    detail = "; ".join(errors) or "no providers configured"
+    raise ProviderError(f"{symbol}: all bar providers failed: {detail}")
 
 
 async def _merge_bar(session: AsyncSession, row: BarData) -> None:
