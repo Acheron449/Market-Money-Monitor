@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<ownershipDocument>
+  <schemaVersion>X0608</schemaVersion>
+  <documentType>4</documentType>
+  <periodOfReport>2026-11-05</periodOfReport>
+  <issuer>
+    <issuerCik>0001045810</issuerCik>
+    <issuerName>NVIDIA CORP</issuerName>
+    <issuerTradingSymbol>NVDA</issuerTradingSymbol>
+  </issuer>
+  <reportingOwner>
+    <reportingOwnerId>
+      <rptOwnerCik>0001214128</rptOwnerCik>
+      <rptOwnerName>HUANG JEN HSUN</rptOwnerName>
+    </reportingOwnerId>
+    <reportingOwnerAddress>
+      <rptOwnerStreet1>2788 SAN TOMAS EXPRESSWAY</rptOwnerStreet1>
+      <rptOwnerCity>SANTA CLARA</rptOwnerCity>
+      <rptOwnerState>CA</rptOwnerState>
+      <rptOwnerZipCode>95051</rptOwnerZipCode>
+    </reportingOwnerAddress>
+    <reportingOwnerRelationship>
+      <isDirector>1</isDirector>
+      <isOfficer>1</isOfficer>
+      <isTenPercentOwner>0</isTenPercentOwner>
+      <officerTitle>President and Chief Executive Officer</officerTitle>
+      <aff10b5One>0</aff10b5One>
+    </reportingOwnerRelationship>
+  </reportingOwner>
+  <nonDerivativeTable>
+    <nonDerivativeTransaction>
+      <securityTitle>
+        <value>Common Stock</value>
+      </securityTitle>
+      <transactionDate>
+        <value>2026-11-05</value>
+      </transactionDate>
+      <transactionCoding>
+        <transactionFormType>4</transactionFormType>
+        <transactionCode>P</transactionCode>
+        <equitySwapInvolved>0</equitySwapInvolved>
+      </transactionCoding>
+      <transactionAmounts>
+        <transactionShares>
+          <value>10000</value>
+        </transactionShares>
+        <transactionPricePerShare>
+          <value>182.5</value>
+        </transactionPricePerShare>
+        <transactionAcquiredDisposedCode>
+          <value>A</value>
+        </transactionAcquiredDisposedCode>
+      </transactionAmounts>
+      <postTransactionAmounts>
+        <sharesOwnedFollowingTransaction>
+          <value>85000000</value>
+        </sharesOwnedFollowingTransaction>
+      </postTransactionAmounts>
+      <ownershipNature>
+        <directOrIndirectOwnership>
+          <value>D</value>
+        </directOrIndirectOwnership>
+      </ownershipNature>
+    </nonDerivativeTransaction>
+  </nonDerivativeTable>
+  <remarks>Shares purchased in the open market.</remarks>
+</ownershipDocument>

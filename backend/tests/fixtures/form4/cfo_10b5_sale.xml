@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<ownershipDocument>
+  <schemaVersion>X0608</schemaVersion>
+  <documentType>4</documentType>
+  <periodOfReport>2026-11-04</periodOfReport>
+  <issuer>
+    <issuerCik>0001679788</issuerCik>
+    <issuerName>COINBASE GLOBAL, INC.</issuerName>
+    <issuerTradingSymbol>COIN</issuerTradingSymbol>
+  </issuer>
+  <reportingOwner>
+    <reportingOwnerId>
+      <rptOwnerCik>0001771340</rptOwnerCik>
+      <rptOwnerName>AHSAN AMEESH</rptOwnerName>
+    </reportingOwnerId>
+    <reportingOwnerAddress>
+      <rptOwnerStreet1>1 MADISON AVENUE</rptOwnerStreet1>
+      <rptOwnerCity>NEW YORK</rptOwnerCity>
+      <rptOwnerState>NY</rptOwnerState>
+      <rptOwnerZipCode>10010</rptOwnerZipCode>
+    </reportingOwnerAddress>
+    <reportingOwnerRelationship>
+      <isDirector>0</isDirector>
+      <isOfficer>1</isOfficer>
+      <isTenPercentOwner>0</isTenPercentOwner>
+      <officerTitle>Chief Financial Officer</officerTitle>
+      <aff10b5One>1</aff10b5One>
+    </reportingOwnerRelationship>
+  </reportingOwner>
+  <nonDerivativeTable>
+    <nonDerivativeTransaction>
+      <securityTitle>
+        <value>Class A Common Stock</value>
+      </securityTitle>
+      <transactionDate>
+        <value>2026-11-04</value>
+      </transactionDate>
+      <transactionCoding>
+        <transactionFormType>4</transactionFormType>
+        <transactionCode>S</transactionCode>
+        <equitySwapInvolved>0</equitySwapInvolved>
+      </transactionCoding>
+      <transactionAmounts>
+        <transactionShares>
+          <value>2500</value>
+        </transactionShares>
+        <transactionPricePerShare>
+          <value>310.2</value>
+          <footnoteId id="F1"/>
+        </transactionPricePerShare>
+        <transactionAcquiredDisposedCode>
+          <value>D</value>
+        </transactionAcquiredDisposedCode>
+      </transactionAmounts>
+      <postTransactionAmounts>
+        <sharesOwnedFollowingTransaction>
+          <value>187500</value>
+        </sharesOwnedFollowingTransaction>
+      </postTransactionAmounts>
+      <ownershipNature>
+        <directOrIndirectOwnership>
+          <value>D</value>
+        </directOrIndirectOwnership>
+      </ownershipNature>
+    </nonDerivativeTransaction>
+  </nonDerivativeTable>
+  <footnotes>
+    <footnote id="F1">The price reported is a weighted average price.</footnote>
+  </footnotes>
+  <remarks>Sale made pursuant to a Rule 10b5-1 trading plan adopted 2026-03-01.</remarks>
+</ownershipDocument>

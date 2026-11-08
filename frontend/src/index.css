@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-bg font-sans text-fg antialiased;
+    background-image: radial-gradient(
+      ellipse 80% 50% at 50% -10%,
+      hsl(157 25% 12%) 0%,
+      hsl(160 27% 6%) 70%
+    );
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: hsl(45 51% 70% / 0.25);
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(45 51% 70%);
+    outline-offset: 2px;
+  }
+
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .label {
+    @apply text-[11px] font-medium uppercase tracking-[0.12em] text-muted;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .panel {
+    @apply rounded-xl border border-line bg-card/80 shadow-tile backdrop-blur-sm;
+  }
+
+  .skeleton {
+    @apply animate-pulse rounded bg-line/60;
+  }
+}
+
+@layer utilities {
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(150 24% 16%) transparent;
+  }
+
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scroll-slim::-webkit-scrollbar-thumb {
+    background: hsl(150 24% 16%);
+    border-radius: 999px;
+  }
+}

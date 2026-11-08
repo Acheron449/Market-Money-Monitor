@@ -1,0 +1,27 @@
+# Runtime configuration (ADM-01). Environment variables still win for secrets.
+watchlist:
+  - NVDA
+  - AAPL
+  - TSLA
+  - AMZN
+  - META
+  - AMD
+  - PLTR
+  - COIN
+
+lookback_months: 6
+
+provider_order:
+  insiders: [sec_edgar, finnhub, yfinance]
+  quotes: [alpaca, finnhub, yfinance]
+  bars: [alpaca, yfinance]
+  holders: [yfinance]
+
+cadences:
+  quotes_market_seconds: 20
+  quotes_offhours_seconds: 900
+  form4_seconds: 300
+  form4_evening_seconds: 3600
+  holders_seconds: 86400
+  ticker_map_seconds: 604800
+  health_seconds: 60

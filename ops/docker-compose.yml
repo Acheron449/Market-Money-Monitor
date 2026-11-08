@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: smm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smm}
+      POSTGRES_DB: smm
+    volumes:
+      - smm-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smm"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://smm:${POSTGRES_PASSWORD:-smm}@db:5432/smm
+      SEC_USER_AGENT: ${SEC_USER_AGENT:?set SEC_USER_AGENT in .env}
+      ALPACA_KEY_ID: ${ALPACA_KEY_ID:-}
+      ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY:-}
+      ALPACA_FEED: ${ALPACA_FEED:-iex}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      CORS_ORIGINS: http://localhost:3000
+      SMM_CONFIG_FILE: /app/smm.yaml
+    volumes:
+      - ../smm.yaml:/app/smm.yaml:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  web:
+    build:
+      context: ../frontend
+      args:
+        VITE_API_BASE: ""
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  smm-db:

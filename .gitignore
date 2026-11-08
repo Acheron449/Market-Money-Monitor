@@ -39,6 +39,9 @@ pnpm-debug.log*
 npm-debug.log*
 frontend/dist/
 frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/
+frontend/e2e/screenshots/
 
 # TradingView Charting Library: proprietary, non-redistributable (docs/TRADINGVIEW.md, gate G4)
 frontend/public/charting_library/

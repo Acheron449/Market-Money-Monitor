@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<ownershipDocument>
+  <schemaVersion>X0608</schemaVersion>
+  <documentType>4/A</documentType>
+  <periodOfReport>2026-10-30</periodOfReport>
+  <dateOfOriginalSubmission>2026-11-01</dateOfOriginalSubmission>
+  <issuer>
+    <issuerCik>0000002488</issuerCik>
+    <issuerName>ADVANCED MICRO DEVICES INC</issuerName>
+    <issuerTradingSymbol>AMD</issuerTradingSymbol>
+  </issuer>
+  <reportingOwner>
+    <reportingOwnerId>
+      <rptOwnerCik>0001302416</rptOwnerCik>
+      <rptOwnerName>SU LISA T</rptOwnerName>
+    </reportingOwnerId>
+    <reportingOwnerAddress>
+      <rptOwnerStreet1>2485 AUGUSTINE DRIVE</rptOwnerStreet1>
+      <rptOwnerCity>SANTA CLARA</rptOwnerCity>
+      <rptOwnerState>CA</rptOwnerState>
+      <rptOwnerZipCode>95054</rptOwnerZipCode>
+    </reportingOwnerAddress>
+    <reportingOwnerRelationship>
+      <isDirector>0</isDirector>
+      <isOfficer>1</isOfficer>
+      <isTenPercentOwner>0</isTenPercentOwner>
+      <officerTitle>Chief Executive Officer</officerTitle>
+      <aff10b5One>1</aff10b5One>
+    </reportingOwnerRelationship>
+  </reportingOwner>
+  <nonDerivativeTable>
+    <nonDerivativeTransaction>
+      <securityTitle>
+        <value>Common Stock</value>
+      </securityTitle>
+      <transactionDate>
+        <value>2026-10-30</value>
+      </transactionDate>
+      <transactionCoding>
+        <transactionFormType>4</transactionFormType>
+        <transactionCode>S</transactionCode>
+        <equitySwapInvolved>0</equitySwapInvolved>
+      </transactionCoding>
+      <transactionAmounts>
+        <transactionShares>
+          <value>30000</value>
+        </transactionShares>
+        <transactionPricePerShare>
+          <value>245.61</value>
+        </transactionPricePerShare>
+        <transactionAcquiredDisposedCode>
+          <value>D</value>
+        </transactionAcquiredDisposedCode>
+      </transactionAmounts>
+      <postTransactionAmounts>
+        <sharesOwnedFollowingTransaction>
+          <value>1200000</value>
+        </sharesOwnedFollowingTransaction>
+      </postTransactionAmounts>
+      <ownershipNature>
+        <directOrIndirectOwnership>
+          <value>D</value>
+        </directOrIndirectOwnership>
+      </ownershipNature>
+    </nonDerivativeTransaction>
+  </nonDerivativeTable>
+  <remarks>This amendment corrects the transaction date.</remarks>
+</ownershipDocument>
