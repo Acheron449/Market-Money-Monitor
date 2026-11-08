@@ -1,4 +1,4 @@
-import type { Dashboard, HistoryPoint, Holder, RefreshResponse } from "./types";
+import type { Dashboard, HistoryPoint, Holder, RefreshResponse, Watchlist } from "./types";
 
 export const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
 
@@ -38,5 +38,12 @@ export const api = {
     request<RefreshResponse>("/api/refresh", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+    }),
+  watchlist: () => request<Watchlist>("/api/watchlist"),
+  replaceWatchlist: (tickers: string[]) =>
+    request<Watchlist>("/api/watchlist", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tickers }),
     }),
 };

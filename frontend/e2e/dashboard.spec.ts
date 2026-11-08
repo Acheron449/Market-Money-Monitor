@@ -302,6 +302,108 @@ test("no horizontal overflow at 360, 768 and 1440", async ({ page }) => {
   }
 });
 
+test("watchlist editor persists additions, removals and order", async ({ page }) => {
+  const errors = collectErrors(page);
+  await openDashboard(page);
+
+  await page.getByRole("button", { name: "Edit watchlist" }).click();
+  await expect(page.getByTestId("watchlist-editor")).toBeVisible();
+  await expect(page.getByTestId("watchlist-row")).toHaveCount(8);
+
+  // The editor stays inside a 360 px viewport.
+  await page.setViewportSize({ width: 360, height: 780 });
+  const editorOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(editorOverflow, "watchlist editor horizontal overflow at 360px").toBeLessThanOrEqual(1);
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const input = page.getByTestId("watchlist-add-input");
+  const add = page.getByTestId("watchlist-add");
+
+  // Client-side shape rejection stays in the editor.
+  await input.fill("not a ticker");
+  await add.click();
+  await expect(page.getByTestId("watchlist-error")).toContainText("Use 1–10 letters");
+  await expect(page.getByTestId("watchlist-row")).toHaveCount(8);
+
+  // A well-formed symbol outside the resolved universe is rejected by the API.
+  await input.fill("ZZZZ");
+  await add.click();
+  await expect(page.getByTestId("watchlist-error")).toContainText(
+    "ZZZZ is not in the known ticker universe",
+  );
+  await expect(page.getByTestId("tile")).toHaveCount(8);
+
+  // Add the resolved off-watchlist fixture and wait for the dashboard to follow.
+  await input.fill("msft");
+  await add.click();
+  await expect(page.getByTestId("watchlist-row")).toHaveCount(9);
+  await expect(page.getByTestId("tile")).toHaveCount(9);
+
+  const msft = page.locator('[data-testid="tile"][data-ticker="MSFT"]');
+  await expect(msft).toBeVisible();
+
+  // The SSE stream's subscription scope follows the active watchlist.
+  try {
+    writeQuote("MSFT", 420.42, 1.5);
+    await expect(msft).toContainText("+1.50%");
+  } finally {
+    writeQuote("MSFT", 415.2, 0.65);
+  }
+
+  // The newly active ticker renders its tape, chart and holders.
+  await msft.click();
+  await expect(page.getByTestId("tape-ticker")).toHaveText("MSFT");
+  await expect(page.getByTestId("tape-row")).toHaveCount(2);
+  await expect(page.getByTestId("marker")).toHaveCount(2);
+  await expect(page.getByTestId("holder-row")).toHaveCount(5);
+  await expect(page.getByTestId("price-chart").getByTestId("chart-canvas")).toHaveAttribute(
+    "aria-label",
+    /MSFT/,
+  );
+
+  // Remove a different ticker and reorder the new one.
+  await page.getByRole("button", { name: "Remove AAPL" }).click();
+  await expect(page.getByTestId("watchlist-row")).toHaveCount(8);
+  await expect(page.locator('[data-testid="tile"][data-ticker="AAPL"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Move MSFT up" }).click();
+
+  const expectedOrder = ["NVDA", "TSLA", "AMZN", "META", "AMD", "PLTR", "MSFT", "COIN"];
+  await expect
+    .poll(async () =>
+      page.getByTestId("tile").evaluateAll((nodes) =>
+        nodes.map((node) => node.getAttribute("data-ticker") ?? ""),
+      ),
+    )
+    .toEqual(expectedOrder);
+
+  // The change is server-side, so a full reload keeps the new watchlist.
+  await page.getByRole("button", { name: "Close watchlist editor" }).click();
+  await page.reload();
+  await expect(page.getByTestId("tile")).toHaveCount(8);
+  await expect(page.locator('[data-testid="tile"][data-ticker="MSFT"]')).toBeVisible();
+  await expect(page.locator('[data-testid="tile"][data-ticker="AAPL"]')).toHaveCount(0);
+  const orderAfterReload = await page
+    .getByTestId("tile")
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-ticker") ?? ""));
+  expect(orderAfterReload).toEqual(expectedOrder);
+
+  const persisted = (await (await page.request.get("/api/watchlist")).json()) as {
+    tickers: string[];
+  };
+  expect(persisted.tickers).toEqual(expectedOrder);
+
+  // Two errors are intentional here: the 422 from the rejected symbol and the
+  // EventSource abort as reload tears down the page. Nothing else may appear.
+  const unexpected = errors.filter(
+    (error) =>
+      !(error.includes("422 (Unprocessable Entity)") && error.includes("Failed to load resource")) &&
+      !(error.includes("/api/stream") && error.includes("net::ERR_ABORTED")),
+  );
+  expect(unexpected, "unexpected console, page or same-origin network errors").toEqual([]);
+});
+
 test("toasts a new Form 4 and refreshes the tape", async ({ page }) => {
   const errors = collectErrors(page);
   await openDashboard(page);

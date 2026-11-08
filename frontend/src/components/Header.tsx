@@ -5,7 +5,9 @@ interface HeaderProps {
   latestFilingDate: string | null;
   refreshing: boolean;
   streamStatus: StreamStatus;
+  editingWatchlist: boolean;
   onRefresh: () => void;
+  onEditWatchlist: () => void;
 }
 
 const STREAM_LABEL: Record<StreamStatus, string> = {
@@ -14,7 +16,14 @@ const STREAM_LABEL: Record<StreamStatus, string> = {
   polling: "Polling 15s",
 };
 
-export function Header({ latestFilingDate, refreshing, streamStatus, onRefresh }: HeaderProps) {
+export function Header({
+  latestFilingDate,
+  refreshing,
+  streamStatus,
+  editingWatchlist,
+  onRefresh,
+  onEditWatchlist,
+}: HeaderProps) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-5">
       <div className="flex items-center gap-4">
@@ -56,6 +65,17 @@ export function Header({ latestFilingDate, refreshing, streamStatus, onRefresh }
         <p className="text-sm text-muted" data-testid="filing-lag">
           Latest filing <span className="text-fg">{relativeDays(latestFilingDate)}</span>
         </p>
+        <button
+          type="button"
+          onClick={onEditWatchlist}
+          aria-expanded={editingWatchlist}
+          className="inline-flex items-center gap-2 rounded-lg border border-line bg-card px-3.5 py-2 text-sm font-medium text-fg transition hover:border-champagne/50 hover:text-champagne"
+        >
+          <span aria-hidden="true" className="text-champagne">
+            ☰
+          </span>
+          {editingWatchlist ? "Hide watchlist" : "Edit watchlist"}
+        </button>
         <button
           type="button"
           onClick={onRefresh}

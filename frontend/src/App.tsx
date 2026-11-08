@@ -11,6 +11,7 @@ import { InsiderTape, type TapeFilter } from "./components/InsiderTape";
 import { PriceChart } from "./components/PriceChart";
 import { SignalTiles } from "./components/SignalTiles";
 import { DashboardSkeleton, ErrorState } from "./components/States";
+import { WatchlistEditor } from "./components/WatchlistEditor";
 import { useDashboard, useHistory, useHolders } from "./hooks/useMarketData";
 import { useQuoteStream } from "./hooks/useQuoteStream";
 
@@ -20,6 +21,7 @@ export function App() {
   const stream = useQuoteStream(dashboard.isSuccess);
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState<TapeFilter>("all");
+  const [editingWatchlist, setEditingWatchlist] = useState(false);
 
   const signals = useMemo(() => dashboard.data?.signals ?? [], [dashboard.data]);
   const activeTicker = useMemo(() => {
@@ -67,17 +69,23 @@ export function App() {
         latestFilingDate={data.latestFilingDate}
         refreshing={refresh.isPending}
         streamStatus={stream.status}
+        editingWatchlist={editingWatchlist}
         onRefresh={() => refresh.mutate()}
+        onEditWatchlist={() => setEditingWatchlist((open) => !open)}
       />
 
       <div className="mt-4">
         <FreshnessBar freshness={data.freshness} lookbackMonths={data.lookbackMonths} />
       </div>
 
+      {editingWatchlist ? (
+        <WatchlistEditor onClose={() => setEditingWatchlist(false)} />
+      ) : null}
+
       <div className="mt-5">
         {signals.length === 0 ? (
           <p role="status" className="panel p-6 text-sm text-muted">
-            The watchlist is empty. Add tickers with PUT /api/watchlist or in smm.yaml.
+            The watchlist is empty. Add tickers with the watchlist editor.
           </p>
         ) : (
           <SignalTiles

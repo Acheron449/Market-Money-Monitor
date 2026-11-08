@@ -63,23 +63,43 @@ async def seed_market_data(session: AsyncSession) -> None:
             Ticker(symbol="OLD", active=False, sort_order=9),
         ]
     )
-    session.add(
-        Quote(
-            symbol="NVDA",
-            price=Decimal("182.50"),
-            change_pct=Decimal("1.25"),
-            as_of=datetime.now(UTC),
-            source="alpaca",
-            delayed=True,
-        )
+    session.add_all(
+        [
+            Quote(
+                symbol="NVDA",
+                price=Decimal("182.50"),
+                change_pct=Decimal("1.25"),
+                as_of=datetime.now(UTC),
+                source="alpaca",
+                delayed=True,
+            ),
+            # Inactive but resolved: activating it through /api/watchlist must make
+            # every read path render its seeded data.
+            Quote(
+                symbol="OLD",
+                price=Decimal("50.00"),
+                change_pct=Decimal("2.00"),
+                as_of=datetime.now(UTC),
+                source="fixtures",
+                delayed=True,
+            ),
+        ]
     )
-    session.add(
-        PriceBar(
-            symbol="NVDA",
-            date=today - timedelta(days=1),
-            close=Decimal("180.00"),
-            source="alpaca",
-        )
+    session.add_all(
+        [
+            PriceBar(
+                symbol="NVDA",
+                date=today - timedelta(days=1),
+                close=Decimal("180.00"),
+                source="alpaca",
+            ),
+            PriceBar(
+                symbol="OLD",
+                date=today - timedelta(days=1),
+                close=Decimal("48.00"),
+                source="fixtures",
+            ),
+        ]
     )
     session.add_all(
         [
@@ -143,20 +163,53 @@ async def seed_market_data(session: AsyncSession) -> None:
                 is_amendment=False,
                 source="sec_edgar",
             ),
+            InsiderTxn(
+                accession_no="0001-26-000004",
+                line_no=1,
+                symbol="OLD",
+                filing_date=today,
+                txn_date=today - timedelta(days=1),
+                insider_name="OLD INSIDER",
+                insider_cik="999999",
+                officer_title="Director",
+                role="Director",
+                txn_code="P",
+                action="buy",
+                shares=Decimal("100"),
+                price=Decimal("50"),
+                value=Decimal("5000"),
+                shares_after=Decimal("1000"),
+                is_10b5_1=False,
+                is_amendment=False,
+                source="fixtures",
+            ),
         ]
     )
-    session.add(
-        Holder(
-            symbol="NVDA",
-            report_period=date(today.year, 9, 30),
-            institution_cik="0000102909",
-            institution="VANGUARD GROUP INC",
-            shares=Decimal("1000000"),
-            value=Decimal("180000000"),
-            qoq_change_pct=None,
-            rank=1,
-            source="yfinance",
-        )
+    session.add_all(
+        [
+            Holder(
+                symbol="NVDA",
+                report_period=date(today.year, 9, 30),
+                institution_cik="0000102909",
+                institution="VANGUARD GROUP INC",
+                shares=Decimal("1000000"),
+                value=Decimal("180000000"),
+                qoq_change_pct=None,
+                rank=1,
+                source="yfinance",
+            ),
+            Holder(
+                symbol="OLD",
+                report_period=date(today.year, 9, 30),
+                institution_cik="999999",
+                institution="OLD HOLDINGS LLC",
+                shares=Decimal("1000"),
+                value=Decimal("50000"),
+                qoq_change_pct=None,
+                rank=1,
+                source="fixtures",
+            ),
+        ]
     )
     await session.commit()
 

@@ -62,3 +62,7 @@ export interface RefreshResponse {
   jobId: string;
   status: string;
 }
+
+export interface Watchlist {
+  tickers: string[];
+}

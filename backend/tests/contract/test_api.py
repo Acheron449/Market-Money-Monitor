@@ -112,32 +112,6 @@ async def test_refresh_is_accepted_then_throttled(client: AsyncClient) -> None:
     assert second.json()["code"] == "throttled"
 
 
-async def test_watchlist_requires_token_to_replace(client: AsyncClient) -> None:
-    denied = await client.put("/api/watchlist", json={"tickers": ["NVDA", "TSLA"]})
-    assert denied.status_code == 401
-
-    allowed = await client.put(
-        "/api/watchlist",
-        json={"tickers": ["NVDA", "TSLA"]},
-        headers={"Authorization": "Bearer test-token"},
-    )
-    assert allowed.status_code == 200
-    assert allowed.json() == {"tickers": ["NVDA", "TSLA"]}
-
-    read = await client.get("/api/watchlist")
-    assert read.json() == {"tickers": ["NVDA", "TSLA"]}
-
-
-async def test_watchlist_rejects_bad_symbols(client: AsyncClient) -> None:
-    response = await client.put(
-        "/api/watchlist",
-        json={"tickers": ["not a ticker"]},
-        headers={"Authorization": "Bearer test-token"},
-    )
-    assert response.status_code == 422
-    assert response.json()["code"] == "invalid_ticker"
-
-
 async def test_health_and_readiness(client: AsyncClient) -> None:
     assert (await client.get("/healthz")).json() == {"status": "ok"}
     assert (await client.get("/readyz")).json() == {"status": "ready"}

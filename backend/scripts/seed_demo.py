@@ -23,13 +23,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from sqlalchemy import select
+
 from app.config import Settings, load_runtime_config
+from app.db.models import Ticker
 from app.db.session import Database
 from app.parsers.form4 import parse_form4
 from app.providers.base import BarData, HolderData, InsiderTxnData, QuoteData
 from app.providers.registry import ProviderRegistry
 from app.services.ingest import (
-    active_tickers,
     ingest_bars,
     ingest_holders,
     ingest_insiders,
@@ -51,7 +53,12 @@ COMPANIES: dict[str, tuple[str, str]] = {
     "AMD": ("0000002488", "Advanced Micro Devices, Inc."),
     "PLTR": ("0001321655", "Palantir Technologies Inc."),
     "COIN": ("0001679788", "Coinbase Global, Inc."),
+    "MSFT": ("0000789019", "Microsoft Corp"),
 }
+
+# Resolved but not on the initial watchlist: the editor can activate these and their
+# seeded quotes, bars, holders and filings immediately appear on the dashboard.
+OFF_WATCHLIST = ("MSFT",)
 
 QUOTES: dict[str, tuple[str, str]] = {
     "NVDA": ("182.50", "1.25"),
@@ -62,6 +69,7 @@ QUOTES: dict[str, tuple[str, str]] = {
     "AMD": ("245.61", "-1.15"),
     "PLTR": ("35.00", "2.05"),
     "COIN": ("310.20", "-0.65"),
+    "MSFT": ("415.20", "0.65"),
 }
 
 HOLDERS = [
@@ -329,6 +337,30 @@ def insider_rows(anchor: date) -> list[InsiderTxnData]:
         is_director=1,
         is_officer=0,
     )
+    rows += generated(
+        symbol="MSFT",
+        accession="0000789019-26-000012",
+        offset=2,
+        anchor=anchor,
+        owner="HOOD AMY E",
+        owner_cik="0001745109",
+        title="Chief Financial Officer",
+        code="P",
+        shares=800,
+        price="415.00",
+    )
+    rows += generated(
+        symbol="MSFT",
+        accession="0000789019-26-000013",
+        offset=4,
+        anchor=anchor,
+        owner="NADELLA SATYA",
+        owner_cik="0001477405",
+        title="Chief Executive Officer",
+        code="S",
+        shares=100,
+        price="410.00",
+    )
     return rows
 
 
@@ -431,7 +463,13 @@ async def main() -> None:
 
     async with database.session() as session:
         await seed_watchlist(session, config)
-        tickers = await active_tickers(session)
+        tickers = list(await session.scalars(select(Ticker).order_by(Ticker.sort_order)))
+        known = {ticker.symbol for ticker in tickers}
+        for index, symbol in enumerate(OFF_WATCHLIST):
+            if symbol not in known:
+                session.add(Ticker(symbol=symbol, active=False, sort_order=100 + index))
+        await session.flush()
+        tickers = list(await session.scalars(select(Ticker).order_by(Ticker.sort_order)))
         for ticker in tickers:
             cik, company = COMPANIES.get(ticker.symbol, (None, ticker.symbol))
             ticker.cik = cik
