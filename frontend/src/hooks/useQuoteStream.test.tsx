@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "../api/client";
-import type { Dashboard, Quote } from "../api/types";
+import type { Dashboard, Quote, Txn } from "../api/types";
 import { useQuoteStream } from "./useQuoteStream";
 
 type Listener = (event: Event) => void;
@@ -51,6 +51,20 @@ const quote: Quote = {
   delayed: true,
 };
 
+const filing: Txn = {
+  key: "0001045810-26-000099:1",
+  ticker: "NVDA",
+  date: "2026-11-09",
+  name: "HUANG JEN HSUN",
+  role: "CEO",
+  action: "buy",
+  typeLabel: "Open-market buy",
+  shares: 1200,
+  value: 222000,
+  starred: true,
+  is10b5_1: false,
+};
+
 const dashboard: Dashboard = {
   signals: [{ ticker: "NVDA", netValue: 1000, txnCount: 1, starredCount: 0 }],
   quotes: { NVDA: quote },
@@ -88,10 +102,10 @@ describe("useQuoteStream", () => {
   it("opens the stream, merges ticks and reports live", () => {
     const { client, source, result } = setup();
     expect(source.url).toBe("/api/stream");
-    expect(result.current).toBe("connecting");
+    expect(result.current.status).toBe("connecting");
 
     act(() => source.open());
-    expect(result.current).toBe("live");
+    expect(result.current.status).toBe("live");
 
     act(() =>
       source.emit("quotes", {
@@ -102,7 +116,21 @@ describe("useQuoteStream", () => {
     const cached = client.getQueryData<Dashboard>(["dashboard"]);
     expect(cached?.quotes.NVDA?.price).toBe(190.25);
     expect(cached?.quotes.NVDA?.changePct).toBe(2.75);
-    expect(result.current).toBe("live");
+    expect(result.current.status).toBe("live");
+  });
+
+  it("turns new filings into toast notices and dismisses them", () => {
+    const { source, result } = setup();
+    act(() => source.open());
+
+    act(() => source.emit("filings", { filings: [filing] }));
+    expect(result.current.filings).toHaveLength(1);
+    expect(result.current.filings[0]?.ticker).toBe("NVDA");
+    expect(result.current.filings[0]?.name).toBe("HUANG JEN HSUN");
+    expect(result.current.filings[0]?.value).toBe(222000);
+
+    act(() => result.current.dismissFiling(result.current.filings[0]?.noticeId ?? ""));
+    expect(result.current.filings).toHaveLength(0);
   });
 
   it("falls back to a 15 s poll when the stream errors and stops on unmount", async () => {
@@ -111,7 +139,7 @@ describe("useQuoteStream", () => {
     const { client, source, result, unmount } = setup();
 
     act(() => source.fail());
-    expect(result.current).toBe("polling");
+    expect(result.current.status).toBe("polling");
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);

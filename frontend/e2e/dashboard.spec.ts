@@ -26,6 +26,15 @@ function writeQuote(symbol: string, price: number, changePct: number): void {
   });
 }
 
+function insertFiling(): void {
+  execFileSync("uv", ["run", "python", "scripts/e2e_new_filing.py"], {
+    cwd: BACKEND,
+    env: { ...process.env, DATABASE_URL: "sqlite+aiosqlite:///./e2e.db" },
+    timeout: 30_000,
+    stdio: "pipe",
+  });
+}
+
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on("console", (message) => {
@@ -291,4 +300,29 @@ test("no horizontal overflow at 360, 768 and 1440", async ({ page }) => {
   if (narrowTape && narrowChart) {
     expect(narrowChart.y).toBeGreaterThan(narrowTape.y);
   }
+});
+
+test("toasts a new Form 4 and refreshes the tape", async ({ page }) => {
+  const errors = collectErrors(page);
+  await openDashboard(page);
+  await expect(page.getByTestId("stream-status")).toHaveAttribute("data-status", "live");
+  await expect(page.getByTestId("filing-toast")).toHaveCount(0);
+
+  insertFiling();
+
+  const toast = page.getByTestId("filing-toast");
+  await expect(toast).toHaveCount(1, { timeout: 15_000 });
+  await expect(toast).toContainText("New Form 4 · NVDA");
+  await expect(toast).toContainText("HUANG JEN HSUN");
+  await expect(toast).toContainText("Open-market buy");
+  await expect(toast).toContainText("$222K");
+
+  const nvda = page.locator('[data-testid="tile"][data-ticker="NVDA"]');
+  await expect(page.getByTestId("tape-row")).toHaveCount(5);
+  await expect(nvda.getByTestId("tile-net")).toContainText("+$2.4M");
+
+  await page.getByRole("button", { name: "Dismiss NVDA filing" }).click();
+  await expect(toast).toHaveCount(0);
+
+  expect(errors, "console, page or same-origin network errors").toEqual([]);
 });

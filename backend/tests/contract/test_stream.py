@@ -10,7 +10,7 @@ from decimal import Decimal
 from starlette.requests import Request
 
 from app.api.stream import _quote_events, stream
-from app.db.models import Quote
+from app.db.models import InsiderTxn, Quote
 
 
 def _data(chunk: str) -> dict[str, object]:
@@ -47,6 +47,59 @@ async def test_stream_snapshot_then_only_changed_quotes(seeded) -> None:  # type
     assert set(changed) == {"NVDA"}
     assert changed["NVDA"]["price"] == 190.25  # type: ignore[index]
     assert changed["NVDA"]["changePct"] == 2.75  # type: ignore[index]
+    await events.aclose()
+
+
+async def test_stream_emits_new_filings_once(seeded) -> None:  # type: ignore[no-untyped-def]
+    settings = seeded.state.settings
+    settings.stream_poll_seconds = 0.01
+    settings.stream_heartbeat_seconds = 5
+    events = _quote_events(seeded.state.db, settings)
+
+    await anext(events)  # retry hint
+    await anext(events)  # quote snapshot
+
+    async with seeded.state.db.session() as session:
+        session.add(
+            InsiderTxn(
+                accession_no="0001-26-000099",
+                line_no=1,
+                symbol="NVDA",
+                filing_date=datetime.now(UTC).date(),
+                txn_date=datetime.now(UTC).date(),
+                insider_name="HUANG JEN HSUN",
+                insider_cik="1214128",
+                officer_title="President and Chief Executive Officer",
+                role="CEO",
+                txn_code="P",
+                action="buy",
+                shares=Decimal("1200"),
+                price=Decimal("185"),
+                value=Decimal("222000"),
+                shares_after=Decimal("85001200"),
+                is_10b5_1=False,
+                is_amendment=False,
+                source="sec_edgar",
+                created_at=datetime.now(UTC),
+            )
+        )
+        await session.commit()
+
+    async with asyncio.timeout(2):
+        while True:
+            chunk = await anext(events)
+            if chunk.startswith("event: filings"):
+                break
+
+    payload = _data(chunk)
+    filings = payload["filings"]
+    assert isinstance(filings, list)
+    assert len(filings) == 1
+    assert filings[0]["ticker"] == "NVDA"  # type: ignore[index]
+    assert filings[0]["name"] == "HUANG JEN HSUN"  # type: ignore[index]
+    assert filings[0]["action"] == "buy"  # type: ignore[index]
+    assert filings[0]["value"] == 222000.0  # type: ignore[index]
+    assert filings[0]["starred"] is True  # type: ignore[index]
     await events.aclose()
 
 

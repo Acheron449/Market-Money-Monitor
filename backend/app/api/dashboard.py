@@ -9,10 +9,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_config, get_session, get_settings
-from app.api.schemas import DashboardOut, FreshnessOut, QuoteOut, SignalOut, TxnOut
+from app.api.schemas import DashboardOut, FreshnessOut, QuoteOut, SignalOut
+from app.api.serializers import txn_out
 from app.config import RuntimeConfig, Settings
 from app.db.models import InsiderTxn, Quote, Ticker
-from app.services.classification import is_starred
 from app.services.freshness import build_freshness
 from app.services.ingest import signals_for
 from app.services.signals import shift_months
@@ -78,29 +78,11 @@ async def dashboard(
     return DashboardOut(
         signals=signals,
         quotes=quotes,
-        tape=[_txn_out(row) for row in tape_rows],
+        tape=[txn_out(row) for row in tape_rows],
         lookbackMonths=config.lookback_months,
         latestFilingDate=latest.isoformat() if latest else None,
         generatedAt=datetime.now(UTC).isoformat(),
         freshness={name: FreshnessOut(**entry.as_dict()) for name, entry in freshness.items()},
-    )
-
-
-def _txn_out(row: InsiderTxn) -> TxnOut:
-    from app.services.classification import classify
-
-    return TxnOut(
-        key=f"{row.accession_no}:{row.line_no}",
-        ticker=row.symbol,
-        date=row.txn_date.isoformat(),
-        name=row.insider_name,
-        role=row.role,
-        action=row.action,
-        typeLabel=classify(row.txn_code).type_label,
-        shares=float(row.shares),
-        value=float(row.value) if row.value is not None else None,
-        starred=is_starred(row.action, row.role),
-        is10b5_1=row.is_10b5_1,
     )
 
 

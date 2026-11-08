@@ -1,9 +1,10 @@
-"""GET /api/stream: Server-Sent Events quote ticks with a 20 s heartbeat (AUT-03).
+"""GET /api/stream: Server-Sent Events for quotes and new filings (AUT-03, AUT-07).
 
 The stream reads the store; providers are never called in the request path. The
-first frame is a snapshot of every active quote, later frames carry only quotes
-whose price, change, timestamp or source changed. A comment-line heartbeat keeps
-proxies from closing an idle connection.
+first frame is a snapshot of every active quote; later frames carry only quotes
+whose price, change, timestamp or source changed. Insider transactions inserted
+after the connection is established are published as ``filings`` frames. A
+comment-line heartbeat keeps proxies from closing an idle connection.
 """
 
 from __future__ import annotations
@@ -16,11 +17,12 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 
-from app.api.schemas import QuoteOut, StreamQuotesOut
+from app.api.schemas import QuoteOut, StreamFilingsOut, StreamQuotesOut
+from app.api.serializers import txn_out
 from app.config import Settings
-from app.db.models import Quote, Ticker
+from app.db.models import InsiderTxn, Quote, Ticker
 from app.db.session import Database
 
 router = APIRouter()
@@ -37,17 +39,26 @@ def _fingerprint(quote: QuoteOut) -> tuple[float, float, str, str, bool]:
     return (quote.price, quote.changePct, quote.asOf, quote.source, quote.delayed)
 
 
-async def _active_quotes(database: Database) -> dict[str, QuoteOut]:
+def _txn_key(row: InsiderTxn) -> str:
+    return f"{row.accession_no}:{row.line_no}"
+
+
+async def _active_symbols(database: Database) -> list[str]:
     async with database.session() as session:
-        symbols = list(
+        return list(
             await session.scalars(
                 select(Ticker.symbol)
                 .where(Ticker.active)
                 .order_by(Ticker.sort_order, Ticker.symbol)
             )
         )
-        if not symbols:
-            return {}
+
+
+async def _active_quotes(database: Database) -> dict[str, QuoteOut]:
+    symbols = await _active_symbols(database)
+    if not symbols:
+        return {}
+    async with database.session() as session:
         rows = await session.scalars(select(Quote).where(Quote.symbol.in_(symbols)))
         return {
             row.symbol: QuoteOut(
@@ -61,14 +72,70 @@ async def _active_quotes(database: Database) -> dict[str, QuoteOut]:
         }
 
 
-def _event(name: str, payload: StreamQuotesOut) -> str:
+async def _filings_since(
+    database: Database,
+    watermark: datetime | None,
+    seen: set[str],
+) -> tuple[datetime | None, list[InsiderTxn]]:
+    """Return filings inserted since the last poll and the new watermark.
+
+    The first call establishes a baseline (all current keys at the newest
+    timestamp are marked seen) so a fresh page load never toasts history.
+    Rows are matched with ``>=`` and filtered by key, which also catches rows
+    sharing a second-resolution SQLite timestamp.
+    """
+
+    symbols = await _active_symbols(database)
+    if not symbols:
+        return watermark, []
+
+    async with database.session() as session:
+        latest = await session.scalar(
+            select(func.max(InsiderTxn.created_at)).where(InsiderTxn.symbol.in_(symbols))
+        )
+        if watermark is None:
+            if latest is None:
+                return datetime.now(UTC).replace(tzinfo=None), []
+            baseline = await session.scalars(
+                select(InsiderTxn).where(
+                    InsiderTxn.symbol.in_(symbols),
+                    InsiderTxn.created_at == latest,
+                )
+            )
+            seen.update(_txn_key(row) for row in baseline)
+            return latest, []
+
+        rows = list(
+            await session.scalars(
+                select(InsiderTxn)
+                .where(
+                    InsiderTxn.symbol.in_(symbols),
+                    InsiderTxn.created_at >= watermark,
+                )
+                .order_by(
+                    InsiderTxn.created_at,
+                    InsiderTxn.accession_no,
+                    InsiderTxn.line_no,
+                )
+                .limit(50)
+            )
+        )
+        fresh = [row for row in rows if _txn_key(row) not in seen]
+        return latest or watermark, fresh
+
+
+def _event(name: str, payload: StreamQuotesOut | StreamFilingsOut) -> str:
     data = json.dumps(payload.model_dump(), separators=(",", ":"))
     return f"event: {name}\ndata: {data}\n\n"
 
 
 async def _quote_events(database: Database, settings: Settings) -> AsyncIterator[str]:
-    yield f"retry: {RETRY_MS}\n\n"
     previous: dict[str, tuple[float, float, str, str, bool]] = {}
+    seen: set[str] = set()
+    # Baseline before the first frame so history never toasts and an insert
+    # immediately after connect is still observed.
+    watermark, _ = await _filings_since(database, None, seen)
+    yield f"retry: {RETRY_MS}\n\n"
     last_heartbeat = time.monotonic()
 
     while True:
@@ -84,6 +151,17 @@ async def _quote_events(database: Database, settings: Settings) -> AsyncIterator
                 StreamQuotesOut(quotes=changed, generatedAt=datetime.now(UTC).isoformat()),
             )
             previous.update({symbol: _fingerprint(quote) for symbol, quote in changed.items()})
+
+        watermark, filings = await _filings_since(database, watermark, seen)
+        if filings:
+            yield _event(
+                "filings",
+                StreamFilingsOut(
+                    filings=[txn_out(row) for row in filings],
+                    generatedAt=datetime.now(UTC).isoformat(),
+                ),
+            )
+            seen.update(_txn_key(row) for row in filings)
 
         now = time.monotonic()
         if now - last_heartbeat >= settings.stream_heartbeat_seconds:

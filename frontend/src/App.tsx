@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { api } from "./api/client";
+import { FilingToasts } from "./components/FilingToasts";
 import { Footer } from "./components/Footer";
 import { FreshnessBar } from "./components/FreshnessBar";
 import { Header } from "./components/Header";
@@ -16,7 +17,7 @@ import { useQuoteStream } from "./hooks/useQuoteStream";
 export function App() {
   const queryClient = useQueryClient();
   const dashboard = useDashboard();
-  const streamStatus = useQuoteStream(dashboard.isSuccess);
+  const stream = useQuoteStream(dashboard.isSuccess);
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState<TapeFilter>("all");
 
@@ -65,7 +66,7 @@ export function App() {
       <Header
         latestFilingDate={data.latestFilingDate}
         refreshing={refresh.isPending}
-        streamStatus={streamStatus}
+        streamStatus={stream.status}
         onRefresh={() => refresh.mutate()}
       />
 
@@ -112,6 +113,8 @@ export function App() {
       </div>
 
       <Footer lookbackMonths={data.lookbackMonths} generatedAt={data.generatedAt} />
+
+      <FilingToasts filings={stream.filings} onDismiss={stream.dismissFiling} />
     </main>
   );
 }

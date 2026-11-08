@@ -68,6 +68,11 @@ class StreamQuotesOut(BaseModel):
     generatedAt: str
 
 
+class StreamFilingsOut(BaseModel):
+    filings: list[TxnOut]
+    generatedAt: str
+
+
 class RefreshOut(BaseModel):
     jobId: str
     status: str
