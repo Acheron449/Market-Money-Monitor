@@ -169,7 +169,7 @@ Priority: **M** = must (v1.0), **S** = should (v1.x), **C** = could.
 | --- | --- | --- |
 | ADM-01 | Configuration by environment variables and a YAML file (watchlist, lookback, cadences, provider order); a .env.example documents every key | M |
 | ADM-02 | Admin endpoints (watchlist, refresh from non-local hosts) require a bearer token | M |
-| ADM-03 | Alerts by email, Telegram or webhook for: CEO/CFO open-market buy, single transaction above a threshold, net signal crossing ±$10M, cluster buy | S |
+| ADM-03 | Alerts by email, Telegram or webhook for: CEO/CFO open-market buy, single transaction above a threshold, net signal crossing ±$10M, cluster buy. Alerts are deduplicated in `alert_event` and recent history is served by `GET /api/alerts` | S |
 | ADM-04 | A provider-health page shows breaker state, last success, error rate | C |
 
 ## 6. Data requirements
@@ -184,6 +184,7 @@ Priority: **M** = must (v1.0), **S** = should (v1.x), **C** = could.
 | insider\_txn | (accession\_no, line\_no) PK; symbol, filing\_date, txn\_date, insider\_name, insider\_cik, officer\_title, role, txn\_code, action, shares, price, value, shares\_after, is\_10b5\_1, is\_amendment, source |
 | holder | (symbol, report\_period, institution\_cik) PK; institution, shares, value, prev\_shares, qoq\_change\_pct, rank, source |
 | signal\_snapshot | (symbol, as\_of, lookback\_months) PK; net\_value, buy\_value, sell\_value, txn\_count, starred\_count |
+| alert\_event | id, dedupe\_key (unique), kind, symbol, title, body, channels, status, created\_at |
 | ingest\_run | id, job, provider, started\_at, finished\_at, status, rows, error |
 
 Money is handled as Decimal in the back-end and serialised as JSON numbers. All timestamps are stored in UTC; trading dates are in America/New\_York.
@@ -221,6 +222,7 @@ Paths match the example so its front-end works unchanged; items marked new are a
 | POST | /api/refresh | Trigger an immediate refresh; 202 with job id; throttled |
 | GET | /api/stream | SSE quote ticks with 20 s heartbeat (new) |
 | GET, PUT | /api/watchlist | Read or replace the watchlist; validates ticker and resolves CIK; admin (new) |
+| GET | /api/alerts | Recent ADM-03 alert history, newest first; `limit` 1–100 (new) |
 | GET | /healthz, /readyz, /metrics | Liveness, readiness, Prometheus metrics (new) |
 
 ### 7.2 Response shapes
@@ -232,6 +234,7 @@ type Quote = { price: number; changePct: number; asOf: string; source: string; d
 type Txn = { key: string; ticker: string; date: string; name: string; role: string | null; action: 'buy' | 'sell' | 'other'; typeLabel: string; shares: number; value: number | null; starred: boolean; is10b5_1?: boolean }
 type History = { date: string; close: number }[]
 type Holder = { rank: number; institution: string; shares: number; value: number; qoqChangePct: number | null; reportPeriod?: string }
+type Alert = { id: number; kind: 'ceo_cfo_buy' | 'large_transaction' | 'net_crossing' | 'cluster_buy'; symbol: string; title: string; body: string; createdAt: string; channels: string[]; status: 'recorded' | 'delivered' | 'partial' | 'failed' }
 ```
 
 ### 7.3 Error handling
@@ -285,6 +288,7 @@ Errors use a JSON body with code and message. A failed provider never produces a
 | AC-06 | Visual parity review against the example at 360, 768 and 1440 px |
 | AC-07 | Automated accessibility scan reports zero serious violations |
 | AC-08 | Unit tests prove: net = buys − sells; awards, gifts and withholdings excluded; starred only for CEO/CFO buys; tint follows sign |
+| AC-09 | Each ADM-03 trigger creates one deduplicated alert; configured channels receive it and failures do not fail ingestion |
 
 ## Appendix A. Findings from the example build
 

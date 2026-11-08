@@ -114,6 +114,22 @@ class SignalSnapshot(Base):
     starred_count: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+class AlertEvent(Base):
+    __tablename__ = "alert_event"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    dedupe_key: Mapped[str] = mapped_column(String(200), unique=True, index=True, nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    symbol: Mapped[str] = mapped_column(ForeignKey("ticker.symbol"), index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(240), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    channels: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="recorded", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class IngestRun(Base):
     __tablename__ = "ingest_run"
 

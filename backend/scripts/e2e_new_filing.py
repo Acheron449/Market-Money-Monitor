@@ -19,7 +19,14 @@ from scripts.seed_demo import FixtureInsiderProvider, generated
 from app.config import Settings, load_runtime_config
 from app.db.session import Database
 from app.providers.registry import ProviderRegistry
-from app.services.ingest import active_tickers, ingest_insiders, recompute_signals
+from app.services.alerts import emit_ingest_alerts
+from app.services.ingest import (
+    active_tickers,
+    ingest_insider_rows,
+    latest_net_values,
+    recompute_signals,
+    signals_for,
+)
 
 
 async def main() -> None:
@@ -43,14 +50,25 @@ async def main() -> None:
 
     async with database.session() as session:
         tickers = await active_tickers(session)
-        await ingest_insiders(
+        symbols = [ticker.symbol for ticker in tickers]
+        previous_net = await latest_net_values(session, config.lookback_months)
+        new_rows = await ingest_insider_rows(
             session, registry, [ticker for ticker in tickers if ticker.symbol == "NVDA"], today
         )
+        current = await signals_for(session, symbols, today, config.lookback_months)
         await recompute_signals(
             session,
-            [ticker.symbol for ticker in tickers],
+            symbols,
             today,
             config.lookback_months,
+        )
+        await emit_ingest_alerts(
+            session,
+            settings,
+            new_rows=new_rows,
+            previous_net=previous_net,
+            current=current,
+            as_of=today,
         )
 
     await database.dispose()

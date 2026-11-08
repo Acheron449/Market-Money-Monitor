@@ -67,3 +67,14 @@ export interface RefreshResponse {
 export interface Watchlist {
   tickers: string[];
 }
+
+export interface Alert {
+  id: number;
+  kind: string;
+  symbol: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  channels: string[];
+  status: string;
+}

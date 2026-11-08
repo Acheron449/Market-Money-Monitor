@@ -6,8 +6,11 @@ interface HeaderProps {
   refreshing: boolean;
   streamStatus: StreamStatus;
   editingWatchlist: boolean;
+  alertsOpen: boolean;
+  alertsCount: number;
   onRefresh: () => void;
   onEditWatchlist: () => void;
+  onToggleAlerts: () => void;
 }
 
 const STREAM_LABEL: Record<StreamStatus, string> = {
@@ -21,8 +24,11 @@ export function Header({
   refreshing,
   streamStatus,
   editingWatchlist,
+  alertsOpen,
+  alertsCount,
   onRefresh,
   onEditWatchlist,
+  onToggleAlerts,
 }: HeaderProps) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-5">
@@ -65,6 +71,27 @@ export function Header({
         <p className="text-sm text-muted" data-testid="filing-lag">
           Latest filing <span className="text-fg">{relativeDays(latestFilingDate)}</span>
         </p>
+        <button
+          type="button"
+          onClick={onToggleAlerts}
+          aria-expanded={alertsOpen}
+          aria-controls="alerts-panel"
+          data-testid="alerts-toggle"
+          className="inline-flex items-center gap-2 rounded-lg border border-line bg-card px-3.5 py-2 text-sm font-medium text-fg transition hover:border-champagne/50 hover:text-champagne"
+        >
+          <span aria-hidden="true" className="text-champagne">
+            ◈
+          </span>
+          Alerts
+          {alertsCount > 0 ? (
+            <span
+              data-testid="alerts-count"
+              className="rounded-full border border-champagne/30 bg-champagne/10 px-1.5 text-[11px] text-champagne"
+            >
+              {alertsCount}
+            </span>
+          ) : null}
+        </button>
         <button
           type="button"
           onClick={onEditWatchlist}

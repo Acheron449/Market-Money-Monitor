@@ -9,15 +9,18 @@ from fastapi import FastAPI
 
 from app.core.errors import ProviderError
 from app.providers.registry import ProviderRegistry
+from app.services.alerts import emit_ingest_alerts
 from app.services.ingest import (
     active_tickers,
     bars_gap_start,
     ingest_bars,
     ingest_holders,
-    ingest_insiders,
+    ingest_insider_rows,
     ingest_quotes,
+    latest_net_values,
     recompute_signals,
     resolve_ciks,
+    signals_for,
 )
 from app.services.signals import shift_months
 
@@ -64,13 +67,30 @@ async def run_form4(app: FastAPI) -> None:
                     )
                 tickers = await active_tickers(session)
 
-            since = shift_months(date.today(), -6)
-            await ingest_insiders(session, _registry(app), tickers, since)
+            today = date.today()
+            symbols = [ticker.symbol for ticker in tickers]
+            since = shift_months(today, -6)
+            previous_net = await latest_net_values(session, app.state.config.lookback_months)
+            new_rows = await ingest_insider_rows(session, _registry(app), tickers, since)
+            current = await signals_for(
+                session,
+                symbols,
+                today,
+                app.state.config.lookback_months,
+            )
             await recompute_signals(
                 session,
-                [t.symbol for t in tickers],
-                date.today(),
+                symbols,
+                today,
                 app.state.config.lookback_months,
+            )
+            await emit_ingest_alerts(
+                session,
+                app.state.settings,
+                new_rows=new_rows,
+                previous_net=previous_net,
+                current=current,
+                as_of=today,
             )
         finally:
             await release(session, "form4")

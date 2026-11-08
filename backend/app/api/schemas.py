@@ -85,3 +85,14 @@ class WatchlistOut(BaseModel):
 
 class WatchlistIn(BaseModel):
     tickers: list[str]
+
+
+class AlertOut(BaseModel):
+    id: int
+    kind: str
+    symbol: str
+    title: str
+    body: str
+    createdAt: str
+    channels: list[str]
+    status: str

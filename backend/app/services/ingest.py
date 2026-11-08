@@ -207,7 +207,20 @@ async def ingest_insiders(
     tickers: Sequence[Ticker],
     since: date,
 ) -> int:
-    total = 0
+    """Ingest insider rows and return the number fetched (kept for callers/tests)."""
+
+    return len(await ingest_insider_rows(session, registry, tickers, since))
+
+
+async def ingest_insider_rows(
+    session: AsyncSession,
+    registry: ProviderRegistry,
+    tickers: Sequence[Ticker],
+    since: date,
+) -> list[InsiderTxnData]:
+    """Ingest insider rows and return the fetched rows for alert evaluation."""
+
+    fetched: list[InsiderTxnData] = []
     for ticker in tickers:
         symbol_since = since
         latest = await session.scalar(
@@ -230,8 +243,8 @@ async def ingest_insiders(
                 )
             await session.merge(_txn_model(row))
         await session.commit()
-        total += len(rows)
-    return total
+        fetched.extend(rows)
+    return fetched
 
 
 async def _insider_rows(
@@ -309,6 +322,20 @@ async def signals_for(
         )
         for symbol, items in grouped.items()
     }
+
+
+async def latest_net_values(session: AsyncSession, lookback_months: int) -> dict[str, Decimal]:
+    """Latest persisted net signal per symbol, captured before a recompute replaces it."""
+
+    rows = await session.scalars(
+        select(SignalSnapshot)
+        .where(SignalSnapshot.lookback_months == lookback_months)
+        .order_by(SignalSnapshot.as_of)
+    )
+    values: dict[str, Decimal] = {}
+    for row in rows:
+        values[row.symbol] = row.net_value
+    return values
 
 
 async def recompute_signals(

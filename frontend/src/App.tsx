@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { api } from "./api/client";
+import { AlertsPanel } from "./components/AlertsPanel";
 import { FilingToasts } from "./components/FilingToasts";
 import { Footer } from "./components/Footer";
 import { FreshnessBar } from "./components/FreshnessBar";
@@ -12,6 +13,7 @@ import { PriceChart } from "./components/PriceChart";
 import { SignalTiles } from "./components/SignalTiles";
 import { DashboardSkeleton, ErrorState } from "./components/States";
 import { WatchlistEditor } from "./components/WatchlistEditor";
+import { useAlerts } from "./hooks/useAlerts";
 import { useDashboard, useHistory, useHolders } from "./hooks/useMarketData";
 import { useQuoteStream } from "./hooks/useQuoteStream";
 
@@ -23,6 +25,8 @@ export function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState<TapeFilter>("all");
   const [editingWatchlist, setEditingWatchlist] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const alerts = useAlerts();
 
   const signals = useMemo(() => dashboard.data?.signals ?? [], [dashboard.data]);
   const activeTicker = useMemo(() => {
@@ -71,8 +75,11 @@ export function App() {
         refreshing={refresh.isPending}
         streamStatus={stream.status}
         editingWatchlist={editingWatchlist}
+        alertsOpen={alertsOpen}
+        alertsCount={alerts.data?.length ?? 0}
         onRefresh={() => refresh.mutate()}
         onEditWatchlist={() => setEditingWatchlist((open) => !open)}
+        onToggleAlerts={() => setAlertsOpen((open) => !open)}
       />
 
       <div className="mt-4">
@@ -81,6 +88,16 @@ export function App() {
 
       {editingWatchlist ? (
         <WatchlistEditor onClose={() => setEditingWatchlist(false)} />
+      ) : null}
+
+      {alertsOpen ? (
+        <AlertsPanel
+          alerts={alerts.data ?? []}
+          loading={alerts.isLoading}
+          error={alerts.isError ? (alerts.error instanceof Error ? alerts.error.message : "Could not load alerts.") : null}
+          onRetry={() => void alerts.refetch()}
+          onClose={() => setAlertsOpen(false)}
+        />
       ) : null}
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-2">

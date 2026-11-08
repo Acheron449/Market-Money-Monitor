@@ -1,4 +1,4 @@
-import type { Dashboard, HistoryPoint, Holder, RefreshResponse, Watchlist } from "./types";
+import type { Alert, Dashboard, HistoryPoint, Holder, RefreshResponse, Watchlist } from "./types";
 
 export const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
 
@@ -43,6 +43,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
     }),
   watchlist: () => request<Watchlist>("/api/watchlist"),
+  alerts: (limit = 20) => request<Alert[]>(`/api/alerts?limit=${limit}`),
   replaceWatchlist: (tickers: string[], token: string) =>
     request<Watchlist>("/api/watchlist", {
       method: "PUT",

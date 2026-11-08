@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
@@ -29,6 +30,21 @@ class Settings(BaseSettings):
     finnhub_api_key: str = ""
 
     admin_token: str = ""
+
+    # ADM-03 alert channels and thresholds. Empty channels record alerts without delivery.
+    alerts_enabled: bool = True
+    alert_txn_threshold: Decimal = Decimal("1000000")
+    alert_net_threshold: Decimal = Decimal("10000000")
+    alert_webhook_url: str = ""
+    alert_telegram_bot_token: str = ""
+    alert_telegram_chat_id: str = ""
+    alert_email_to: str = ""
+    alert_email_from: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = True
 
     # Comma separated; the YAML watchlist wins when present.
     watchlist: str = ""

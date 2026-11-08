@@ -31,13 +31,16 @@ from app.db.session import Database
 from app.parsers.form4 import parse_form4
 from app.providers.base import BarData, HolderData, InsiderTxnData, QuoteData
 from app.providers.registry import ProviderRegistry
+from app.services.alerts import emit_ingest_alerts
 from app.services.ingest import (
     ingest_bars,
     ingest_holders,
-    ingest_insiders,
+    ingest_insider_rows,
     ingest_quotes,
+    latest_net_values,
     recompute_signals,
     seed_watchlist,
+    signals_for,
 )
 from app.services.signals import shift_months
 
@@ -504,12 +507,21 @@ async def main() -> None:
         await session.commit()
 
         await ingest_quotes(session, registry, [ticker.symbol for ticker in tickers])
-        await ingest_insiders(session, registry, tickers, shift_months(anchor, -6))
+        symbols = [ticker.symbol for ticker in tickers]
+        previous_net = await latest_net_values(session, config.lookback_months)
+        new_rows = await ingest_insider_rows(session, registry, tickers, shift_months(anchor, -6))
         for ticker in tickers:
             await ingest_bars(session, registry, ticker.symbol, shift_months(anchor, -6), anchor)
             await ingest_holders(session, registry, ticker.symbol)
-        await recompute_signals(
-            session, [ticker.symbol for ticker in tickers], anchor, config.lookback_months
+        current = await signals_for(session, symbols, anchor, config.lookback_months)
+        await recompute_signals(session, symbols, anchor, config.lookback_months)
+        await emit_ingest_alerts(
+            session,
+            settings,
+            new_rows=new_rows,
+            previous_net=previous_net,
+            current=current,
+            as_of=anchor,
         )
 
     await database.dispose()

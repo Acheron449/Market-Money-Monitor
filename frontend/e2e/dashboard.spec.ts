@@ -444,6 +444,27 @@ test("watchlist editor persists additions, removals and order", async ({ page })
   expect(unexpected, "unexpected console, page or same-origin network errors").toEqual([]);
 });
 
+test("shows persisted alert history for triggered filings", async ({ page }) => {
+  const errors = collectErrors(page);
+  await openDashboard(page);
+
+  await page.getByTestId("alerts-toggle").click();
+  const panel = page.getByTestId("alerts-panel");
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Alerts" })).toBeVisible();
+
+  const rows = panel.getByTestId("alert-row");
+  await expect(rows.first()).toBeVisible();
+  await expect(panel).toContainText("CEO/CFO buy");
+  await expect(panel).toContainText("Recorded — no channel configured");
+  await expect(panel).toContainText("NVDA");
+
+  await page.getByRole("button", { name: "Close alerts" }).click();
+  await expect(panel).toHaveCount(0);
+
+  expect(errors, "console, page or same-origin network errors").toEqual([]);
+});
+
 test("toasts a new Form 4 and refreshes the tape", async ({ page }) => {
   const errors = collectErrors(page);
   await openDashboard(page);
