@@ -1,0 +1,44 @@
+# OS and editor noise
+.DS_Store
+.idea/
+.vscode/
+
+# Secrets — never commit keys (see AGENTS.md §7)
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Local databases (SQLite in dev)
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+.pnpm-store/
+pnpm-debug.log*
+npm-debug.log*
+frontend/dist/
+frontend/coverage/
+
+# TradingView Charting Library: proprietary, non-redistributable (docs/TRADINGVIEW.md, gate G4)
+frontend/public/charting_library/
