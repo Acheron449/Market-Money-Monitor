@@ -194,6 +194,7 @@ an optional `cusip,symbol` CSV and otherwise falls back to a normalised issuer-n
 | signal\_snapshot | (symbol, as\_of, lookback\_months) PK; net\_value, buy\_value, sell\_value, txn\_count, starred\_count |
 | alert\_event | id, dedupe\_key (unique), kind, symbol, title, body, channels, status, created\_at |
 | cross\_check\_discrepancy | id, run\_id, checked\_at, symbol, accession\_no, line\_no, field, primary\_value, secondary\_value, difference\_pct, provider |
+| reconciliation\_mismatch | id, run\_id, checked\_at, symbol, accession\_no, field, expected, actual |
 | ingest\_run | id, job, provider, started\_at, finished\_at, status, rows, error |
 
 Money is handled as Decimal in the back-end and serialised as JSON numbers. All timestamps are stored in UTC; trading dates are in America/New\_York.
@@ -232,7 +233,7 @@ Paths match the example so its front-end works unchanged; items marked new are a
 | GET | /api/stream | SSE quote ticks with 20 s heartbeat (new) |
 | GET, PUT | /api/watchlist | Read or replace the watchlist; validates ticker and resolves CIK; admin (new) |
 | GET | /api/alerts | Recent ADM-03 alert history, newest first; `limit` 1–100 (new) |
-| GET | /api/data-quality | Latest cross-check/bulk-run summaries and recent discrepancies; `limit` 1–100 (new) |
+| GET | /api/data-quality | Latest cross-check, EDGAR reconciliation and bulk-run summaries, plus recent discrepancies; `limit` 1–100 (new) |
 | GET | /healthz, /readyz, /metrics | Liveness, readiness, Prometheus metrics (new) |
 
 ### 7.2 Response shapes
@@ -247,8 +248,9 @@ type Holder = { rank: number; institution: string; shares: number; value: number
 type Alert = { id: number; kind: 'ceo_cfo_buy' | 'large_transaction' | 'net_crossing' | 'cluster_buy'; symbol: string; title: string; body: string; createdAt: string; channels: string[]; status: 'recorded' | 'delivered' | 'partial' | 'failed' }
 type BulkLoadSummary = { at: string | null; rows: number; status: 'never' | 'running' | 'ok' | 'error' }
 type CrossCheckSummary = { at: string | null; provider: string | null; checked: number; discrepancies: number; status: 'never' | 'running' | 'ok' | 'error' }
+type ReconciliationSummary = { at: string | null; checked: number; mismatches: number; status: 'never' | 'running' | 'ok' | 'error'; error: string | null }
 type Discrepancy = { id: number; checkedAt: string; symbol: string; accessionNo: string; lineNo: number; field: 'shares' | 'value'; primaryValue: number | null; secondaryValue: number | null; differencePct: number; provider: string }
-type DataQuality = { crossCheck: CrossCheckSummary; bulkInsider: BulkLoadSummary; bulk13f: BulkLoadSummary; discrepancies: Discrepancy[] }
+type DataQuality = { crossCheck: CrossCheckSummary; reconciliation: ReconciliationSummary; bulkInsider: BulkLoadSummary; bulk13f: BulkLoadSummary; discrepancies: Discrepancy[] }
 ```
 
 ### 7.3 Error handling
@@ -304,6 +306,13 @@ Errors use a JSON body with code and message. A failed provider never produces a
 | AC-08 | Unit tests prove: net = buys − sells; awards, gifts and withholdings excluded; starred only for CEO/CFO buys; tint follows sign |
 | AC-09 | Each ADM-03 trigger creates one deduplicated alert; configured channels receive it and failures do not fail ingestion |
 | AC-10 | The bulk loaders import local Insider Transactions and Form 13F archives idempotently, and the daily cross-check persists and logs only shares/value differences above 1% |
+
+AC-01 is implemented as an offline snapshot rather than a second EDGAR fetch:
+`backend/scripts/reconcile_edgar.py` re-parses `backend/tests/fixtures/reconciliation/`, which holds
+five frozen Form 4 documents for each watchlist ticker plus the values EDGAR reports for them. The
+run is logged as an `edgar_reconciliation` job, mismatches are persisted in
+`reconciliation_mismatch`, and the command exits non-zero when any of shares, price, code, date or
+owner differs, so the check is exercisable without credentials or network access.
 
 ## Appendix A. Findings from the example build
 

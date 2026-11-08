@@ -1,4 +1,10 @@
-import type { BulkLoadSummary, CrossCheckSummary, DataQuality, Discrepancy } from "../api/types";
+import type {
+  BulkLoadSummary,
+  CrossCheckSummary,
+  DataQuality,
+  Discrepancy,
+  ReconciliationSummary,
+} from "../api/types";
 import { compactCurrency, compactShares, formatDateTime } from "../lib/format";
 
 interface DataQualityPanelProps {
@@ -53,6 +59,42 @@ function CrossCheck({ summary }: { summary: CrossCheckSummary }) {
       ) : (
         <p className="mt-2 text-xs text-muted">No cross-check run yet.</p>
       )}
+    </div>
+  );
+}
+
+function Reconciliation({ summary }: { summary: ReconciliationSummary }) {
+  return (
+    <div className="rounded-lg border border-line/80 p-3" data-testid="reconciliation-summary">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-sm font-medium">EDGAR reconciliation</h3>
+        <span
+          className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${statusClass(
+            summary.status,
+          )}`}
+        >
+          {STATUS_LABEL[summary.status] ?? summary.status}
+        </span>
+        {summary.at ? (
+          <time dateTime={summary.at} className="ml-auto text-xs text-muted tnum">
+            {formatDateTime(summary.at)}
+          </time>
+        ) : null}
+      </div>
+      {summary.at ? (
+        <p className="mt-2 text-xs text-muted">
+          <span className="text-fg/80">Form 4 snapshot</span>
+          {" · "}
+          {summary.checked} checked
+          {" · "}
+          <span className={summary.mismatches > 0 ? "text-sell" : "text-buy"}>
+            {summary.mismatches} mismatches
+          </span>
+        </p>
+      ) : (
+        <p className="mt-2 text-xs text-muted">No reconciliation run yet.</p>
+      )}
+      {summary.error ? <p className="mt-1 text-xs text-sell">{summary.error}</p> : null}
     </div>
   );
 }
@@ -115,7 +157,7 @@ export function DataQualityPanel({
         <div>
           <h2 className="font-display text-xl font-semibold">Data quality</h2>
           <p className="mt-0.5 text-xs text-muted">
-            Second-provider insider comparison and SEC bulk backfills.
+            Second-provider insider comparison, Form 4 reconciliation and SEC bulk backfills.
           </p>
         </div>
         <button
@@ -147,6 +189,7 @@ export function DataQualityPanel({
       ) : data ? (
         <div className="mt-4 space-y-4">
           <CrossCheck summary={data.crossCheck} />
+          <Reconciliation summary={data.reconciliation} />
           <div className="grid gap-3 sm:grid-cols-2">
             <BulkLoad label="Insider data set" testId="bulk-insider-summary" summary={data.bulkInsider} />
             <BulkLoad label="Form 13F" testId="bulk-13f-summary" summary={data.bulk13f} />

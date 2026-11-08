@@ -95,8 +95,17 @@ export interface Discrepancy {
   provider: string;
 }
 
+export interface ReconciliationSummary {
+  at: string | null;
+  checked: number;
+  mismatches: number;
+  status: string;
+  error: string | null;
+}
+
 export interface DataQuality {
   crossCheck: CrossCheckSummary;
+  reconciliation: ReconciliationSummary;
   bulkInsider: BulkLoadSummary;
   bulk13f: BulkLoadSummary;
   discrepancies: Discrepancy[];

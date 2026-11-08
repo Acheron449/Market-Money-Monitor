@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<ownershipDocument>
+  <schemaVersion>X0608</schemaVersion>
+  <documentType>4</documentType>
+  <periodOfReport>2026-10-07</periodOfReport>
+  <issuer>
+    <issuerCik>0001326801</issuerCik>
+    <issuerName>Meta Platforms, Inc.</issuerName>
+    <issuerTradingSymbol>META</issuerTradingSymbol>
+  </issuer>
+  <reportingOwner>
+    <reportingOwnerId>
+      <rptOwnerCik>0001855612</rptOwnerCik>
+      <rptOwnerName>JONES TRACI L</rptOwnerName>
+    </reportingOwnerId>
+    <reportingOwnerRelationship>
+      <isDirector>0</isDirector>
+      <isOfficer>1</isOfficer>
+      <isTenPercentOwner>0</isTenPercentOwner>
+      <officerTitle>Chief Financial Officer</officerTitle>
+      <aff10b5One>0</aff10b5One>
+    </reportingOwnerRelationship>
+  </reportingOwner>
+  <nonDerivativeTable>
+    <nonDerivativeTransaction>
+      <securityTitle><value>Common Stock</value></securityTitle>
+      <transactionDate><value>2026-10-07</value></transactionDate>
+      <transactionCoding>
+        <transactionFormType>4</transactionFormType>
+        <transactionCode>S</transactionCode>
+        <equitySwapInvolved>0</equitySwapInvolved>
+      </transactionCoding>
+      <transactionAmounts>
+        <transactionShares><value>500</value></transactionShares>
+        <transactionPricePerShare>
+          <value>620.30</value>
+        </transactionPricePerShare>
+        <transactionAcquiredDisposedCode><value>D</value></transactionAcquiredDisposedCode>
+      </transactionAmounts>
+      <postTransactionAmounts>
+        <sharesOwnedFollowingTransaction><value>10002000</value></sharesOwnedFollowingTransaction>
+      </postTransactionAmounts>
+      <ownershipNature>
+        <directOrIndirectOwnership><value>D</value></directOrIndirectOwnership>
+      </ownershipNature>
+    </nonDerivativeTransaction>
+  </nonDerivativeTable>
+  <remarks>Frozen EDGAR reconciliation fixture.</remarks>
+</ownershipDocument>

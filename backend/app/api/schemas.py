@@ -114,8 +114,17 @@ class DiscrepancyOut(BaseModel):
     provider: str
 
 
+class ReconciliationSummaryOut(BaseModel):
+    at: str | None
+    checked: int
+    mismatches: int
+    status: str
+    error: str | None
+
+
 class DataQualityOut(BaseModel):
     crossCheck: CrossCheckSummaryOut
+    reconciliation: ReconciliationSummaryOut
     bulkInsider: BulkLoadSummaryOut
     bulk13f: BulkLoadSummaryOut
     discrepancies: list[DiscrepancyOut]

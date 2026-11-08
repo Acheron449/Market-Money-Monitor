@@ -66,6 +66,24 @@ uv run python scripts/load_sec_bulk.py 13f --path /data/form_13f.zip \
 The 13F loader resolves issuers by CUSIP when a `cusip,symbol` map is supplied and otherwise falls
 back to the stored company name. `GET /api/holders/{ticker}` returns the latest report period only.
 
+## EDGAR reconciliation
+
+AC-01 compares the stored Form 4 rows with a frozen EDGAR-shaped snapshot: five sampled filings for
+each of the eight watchlist tickers (40 total). Every filing is re-parsed with the same
+`parse_form4` parser ingestion uses, then shares, price, code, date and owner are compared with the
+values the snapshot claims. The fixtures live in `backend/tests/fixtures/reconciliation/`; no
+provider credentials or network calls are involved.
+
+```bash
+cd backend
+uv run python scripts/reconcile_edgar.py \
+  --snapshot tests/fixtures/reconciliation/edgar_snapshot.json
+```
+
+The run is recorded as an `edgar_reconciliation` job and each difference is persisted in
+`reconciliation_mismatch`; the command exits non-zero when any field differs. The latest run is
+served by `GET /api/data-quality` and shown in the Data Quality panel.
+
 ## API
 
 | Method | Path | Purpose |
@@ -76,7 +94,7 @@ back to the stored company name. `GET /api/holders/{ticker}` returns the latest 
 | POST | `/api/refresh` | Immediate run, 202, throttled to once per 30 s |
 | GET, PUT | `/api/watchlist` | Read or replace the watchlist (PUT needs the admin token) |
 | GET | `/api/alerts` | Recent deduplicated ADM-03 alert history |
-| GET | `/api/data-quality` | Insider cross-check and SEC bulk-load status |
+| GET | `/api/data-quality` | Insider cross-check, EDGAR reconciliation and SEC bulk-load status |
 | GET | `/healthz`, `/readyz`, `/metrics` | Health, readiness, Prometheus |
 
 Response shapes are the TypeScript types in `docs/SRS.md` §7.2, mirrored in
@@ -106,7 +124,8 @@ opt-in.
   and 10b5-1 badge with exclusion toggle, alerts to email/Telegram/webhook with persisted
   history, SEC insider/13F bulk backfills, and the daily second-provider insider cross-check:
   done.
-- **P6** — load/failure tests, deployment: not started.
+- **P6** — EDGAR Form 4 reconciliation (AC-01): done; load/failure injection, accessibility scan
+  and deployment: not started.
 
 UI-14 is descoped for v1.0: the Advanced Charts licence fails for a personal dashboard in a public
 repository (ADR-003). UI-06 stays on Recharts and is the authoritative marker geometry.

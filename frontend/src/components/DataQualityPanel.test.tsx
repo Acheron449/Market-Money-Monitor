@@ -14,6 +14,13 @@ const quality: DataQuality = {
     status: "ok",
   },
   bulkInsider: { at: null, rows: 0, status: "never" },
+  reconciliation: {
+    at: "2026-11-08T14:30:00Z",
+    checked: 40,
+    mismatches: 0,
+    status: "ok",
+    error: null,
+  },
   bulk13f: { at: "2026-11-08T13:00:00Z", rows: 2, status: "ok" },
   discrepancies: [
     {
@@ -58,12 +65,60 @@ describe("DataQualityPanel", () => {
     expect(screen.getByTestId("cross-check-summary")).toHaveTextContent("fixture_secondary");
     expect(screen.getByTestId("cross-check-summary")).toHaveTextContent("12 checked");
     expect(screen.getByTestId("cross-check-summary")).toHaveTextContent("2 discrepancies");
+    expect(screen.getByTestId("reconciliation-summary")).toHaveTextContent("40 checked");
+    expect(screen.getByTestId("reconciliation-summary")).toHaveTextContent("0 mismatches");
+    expect(screen.getByTestId("reconciliation-summary")).toHaveTextContent("OK");
     expect(screen.getByTestId("bulk-insider-summary")).toHaveTextContent("No bulk load yet.");
     expect(screen.getByTestId("bulk-13f-summary")).toHaveTextContent("2 rows loaded");
     expect(screen.getAllByTestId("discrepancy-row")).toHaveLength(2);
     expect(screen.getByText("Value")).toBeInTheDocument();
     expect(screen.getByText("Shares")).toBeInTheDocument();
     expect(screen.getAllByText("20.0%")).toHaveLength(2);
+  });
+
+  it("shows the reconciliation mismatch count and error", () => {
+    render(
+      <DataQualityPanel
+        data={{
+          ...quality,
+          reconciliation: {
+            at: "2026-11-08T14:30:00Z",
+            checked: 40,
+            mismatches: 2,
+            status: "error",
+            error: "2 mismatch(es) across 40 filings",
+          },
+        }}
+        loading={false}
+        error={null}
+        onRetry={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    const summary = screen.getByTestId("reconciliation-summary");
+    expect(summary).toHaveTextContent("40 checked");
+    expect(summary).toHaveTextContent("2 mismatches");
+    expect(summary).toHaveTextContent("Error");
+    expect(summary).toHaveTextContent("2 mismatch(es) across 40 filings");
+  });
+
+  it("shows the empty reconciliation state", () => {
+    render(
+      <DataQualityPanel
+        data={{
+          ...quality,
+          reconciliation: { at: null, checked: 0, mismatches: 0, status: "never", error: null },
+        }}
+        loading={false}
+        error={null}
+        onRetry={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("reconciliation-summary")).toHaveTextContent(
+      "No reconciliation run yet.",
+    );
   });
 
   it("shows the empty discrepancy state", () => {

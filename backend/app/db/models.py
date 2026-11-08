@@ -148,6 +148,21 @@ class CrossCheckDiscrepancy(Base):
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
 
 
+class ReconciliationMismatch(Base):
+    __tablename__ = "reconciliation_mismatch"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int | None] = mapped_column(ForeignKey("ingest_run.id"), index=True)
+    checked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), index=True, nullable=False
+    )
+    symbol: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+    accession_no: Mapped[str] = mapped_column(String(32), nullable=False)
+    field: Mapped[str] = mapped_column(String(32), nullable=False)
+    expected: Mapped[str] = mapped_column(Text, nullable=False)
+    actual: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 class IngestRun(Base):
     __tablename__ = "ingest_run"
 

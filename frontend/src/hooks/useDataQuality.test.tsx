@@ -16,6 +16,7 @@ const quality: DataQuality = {
     status: "ok",
   },
   bulkInsider: { at: null, rows: 0, status: "never" },
+  reconciliation: { at: null, checked: 0, mismatches: 0, status: "never", error: null },
   bulk13f: { at: "2026-11-08T13:00:00Z", rows: 2, status: "ok" },
   discrepancies: [],
 };

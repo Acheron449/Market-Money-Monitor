@@ -14,8 +14,9 @@ from app.api.schemas import (
     CrossCheckSummaryOut,
     DataQualityOut,
     DiscrepancyOut,
+    ReconciliationSummaryOut,
 )
-from app.db.models import CrossCheckDiscrepancy, IngestRun
+from app.db.models import CrossCheckDiscrepancy, IngestRun, ReconciliationMismatch
 
 router = APIRouter()
 
@@ -26,6 +27,7 @@ async def data_quality(
     session: AsyncSession = Depends(get_session),
 ) -> DataQualityOut:
     cross_run = await _latest(session, "cross_check")
+    reconciliation_run = await _latest(session, "edgar_reconciliation")
     insider_run = await _latest(session, "bulk_insider")
     bulk_run = await _latest(session, "bulk_13f")
     count = 0
@@ -35,6 +37,16 @@ async def data_quality(
                 select(func.count())
                 .select_from(CrossCheckDiscrepancy)
                 .where(CrossCheckDiscrepancy.run_id == cross_run.id)
+            )
+            or 0
+        )
+    reconciliation_count = 0
+    if reconciliation_run is not None:
+        reconciliation_count = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(ReconciliationMismatch)
+                .where(ReconciliationMismatch.run_id == reconciliation_run.id)
             )
             or 0
         )
@@ -52,6 +64,13 @@ async def data_quality(
             checked=cross_run.rows if cross_run is not None else 0,
             discrepancies=count,
             status=cross_run.status if cross_run is not None else "never",
+        ),
+        reconciliation=ReconciliationSummaryOut(
+            at=_run_at(reconciliation_run),
+            checked=reconciliation_run.rows if reconciliation_run is not None else 0,
+            mismatches=reconciliation_count,
+            status=reconciliation_run.status if reconciliation_run is not None else "never",
+            error=reconciliation_run.error if reconciliation_run is not None else None,
         ),
         bulkInsider=_bulk(insider_run),
         bulk13f=_bulk(bulk_run),

@@ -26,6 +26,15 @@ function writeQuote(symbol: string, price: number, changePct: number): void {
   });
 }
 
+function runReconciliation(): void {
+  execFileSync("uv", ["run", "python", "scripts/e2e_reconciliation.py"], {
+    cwd: BACKEND,
+    env: { ...process.env, DATABASE_URL: "sqlite+aiosqlite:///./e2e.db" },
+    timeout: 30_000,
+    stdio: "pipe",
+  });
+}
+
 function loadDataQualityFixtures(): void {
   execFileSync("uv", ["run", "python", "scripts/e2e_data_quality.py"], {
     cwd: BACKEND,
@@ -497,6 +506,36 @@ test("toasts a new Form 4 and refreshes the tape", async ({ page }) => {
   await expect(toast).toHaveCount(0);
 
   expect(errors, "console, page or same-origin network errors").toEqual([]);
+});
+
+test("reconciles Form 4 filings against the frozen EDGAR snapshot", async ({ page }) => {
+  const errors = collectErrors(page);
+  await openDashboard(page);
+
+  runReconciliation();
+  await page.reload();
+
+  await page.getByTestId("data-quality-toggle").click();
+  const panel = page.getByTestId("data-quality-panel");
+  await expect(panel).toBeVisible();
+  const summary = panel.getByTestId("reconciliation-summary");
+  await expect(summary).toContainText("40 checked");
+  await expect(summary).toContainText("0 mismatches");
+  await expect(summary).toContainText("OK");
+  await expect(panel.getByText("No reconciliation run yet.")).toHaveCount(0);
+
+  const quality = (await (await page.request.get("/api/data-quality")).json()) as {
+    reconciliation: { checked: number; mismatches: number; status: string; error: string | null };
+  };
+  expect(quality.reconciliation.checked).toBe(40);
+  expect(quality.reconciliation.mismatches).toBe(0);
+  expect(quality.reconciliation.status).toBe("ok");
+  expect(quality.reconciliation.error).toBeNull();
+
+  const unexpected = errors.filter(
+    (error) => !(error.includes("/api/stream") && error.includes("net::ERR_ABORTED")),
+  );
+  expect(unexpected, "unexpected console, page or same-origin network errors").toEqual([]);
 });
 
 test("shows SEC 13F backfill and insider cross-check discrepancies", async ({ page }) => {

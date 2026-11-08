@@ -47,7 +47,8 @@ async def track_run(
         await session.commit()
         raise
     else:
-        run.status = "ok"
+        if run.status == "running":
+            run.status = "ok"
         run.finished_at = utcnow()
         session.add(run)
         await session.commit()
