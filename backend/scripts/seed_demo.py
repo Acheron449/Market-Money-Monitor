@@ -310,6 +310,32 @@ def insider_rows(anchor: date) -> list[InsiderTxnData]:
         price="210.00",
     )
     rows += generated(
+        symbol="AMZN",
+        accession="0001018724-26-000014",
+        offset=3,
+        anchor=anchor,
+        owner="JASSY ANDREW R",
+        owner_cik="0001581137",
+        title="Chief Executive Officer",
+        code="P",
+        shares=2000,
+        price="210.00",
+    )
+    rows += generated(
+        symbol="AMZN",
+        accession="0001018724-26-000015",
+        offset=5,
+        anchor=anchor,
+        owner="HERINGTON DOUGLAS",
+        owner_cik="0001581145",
+        title="Director",
+        code="P",
+        shares=1000,
+        price="210.00",
+        is_director=1,
+        is_officer=0,
+    )
+    rows += generated(
         symbol="TSLA",
         accession="0001318605-26-000010",
         offset=3,

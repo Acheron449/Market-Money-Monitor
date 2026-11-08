@@ -58,15 +58,26 @@ export function SignalTiles({ signals, quotes, selected, onSelect }: SignalTiles
               <span className="label">net</span>
             </div>
 
-            <div className="flex items-center justify-between gap-2 text-xs text-muted">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
               <span className="tnum">{signal.txnCount} txns</span>
-              <span className="tnum inline-flex items-center gap-1" data-testid="tile-stars">
-                <span aria-hidden="true" className="text-champagne">
-                  ★
+              <div className="flex items-center gap-1.5">
+                {signal.clusterBuy ? (
+                  <span
+                    data-testid="tile-cluster"
+                    aria-label="Cluster buy: three or more insiders bought within 14 days"
+                    className="rounded border border-champagne/50 bg-champagne/10 px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-champagne"
+                  >
+                    Cluster
+                  </span>
+                ) : null}
+                <span className="tnum inline-flex items-center gap-1" data-testid="tile-stars">
+                  <span aria-hidden="true" className="text-champagne">
+                    ★
+                  </span>
+                  {signal.starredCount}
+                  <span className="sr-only">CEO or CFO purchases</span>
                 </span>
-                {signal.starredCount}
-                <span className="sr-only">CEO or CFO purchases</span>
-              </span>
+              </div>
             </div>
           </button>
         );

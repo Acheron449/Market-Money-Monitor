@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,9 @@ TAPE_LIMIT = 400
 
 @router.get("/api/dashboard", response_model=DashboardOut)
 async def dashboard(
+    exclude10b5_1: bool = Query(
+        False, description="Exclude Rule 10b5-1 sales from signal net values"
+    ),
     session: AsyncSession = Depends(get_session),
     settings: Settings = Depends(get_settings),
     config: RuntimeConfig = Depends(get_config),
@@ -61,13 +64,20 @@ async def dashboard(
         )
     )
 
-    results = await signals_for(session, symbols, today, config.lookback_months)
+    results = await signals_for(
+        session,
+        symbols,
+        today,
+        config.lookback_months,
+        exclude_10b5_1=exclude10b5_1,
+    )
     signals = [
         SignalOut(
             ticker=symbol,
             netValue=float(results[symbol].net_value),
             txnCount=results[symbol].txn_count,
             starredCount=results[symbol].starred_count,
+            clusterBuy=results[symbol].cluster_buy,
         )
         for symbol in symbols
     ]

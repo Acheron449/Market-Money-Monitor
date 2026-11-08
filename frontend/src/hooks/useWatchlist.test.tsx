@@ -51,7 +51,7 @@ describe("useReplaceWatchlist", () => {
     const { client, wrapper } = setup();
     const { result } = renderHook(() => useReplaceWatchlist(), { wrapper });
 
-    act(() => result.current.mutate(["NVDA", "MSFT"]));
+    act(() => result.current.mutate({ tickers: ["NVDA", "MSFT"], token: "test-token" }));
     await waitFor(() =>
       expect(client.getQueryData(WATCHLIST_KEY)).toEqual({ tickers: ["NVDA", "MSFT"] }),
     );
@@ -66,7 +66,7 @@ describe("useReplaceWatchlist", () => {
     );
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe("ZZZZ is not in the known ticker universe");
-    expect(spy).toHaveBeenCalledWith(["NVDA", "MSFT"]);
+    expect(spy).toHaveBeenCalledWith(["NVDA", "MSFT"], "test-token");
   });
 
   it("stores the server-normalised order and invalidates the dashboard", async () => {
@@ -75,7 +75,7 @@ describe("useReplaceWatchlist", () => {
     const invalidate = vi.spyOn(client, "invalidateQueries");
     const { result } = renderHook(() => useReplaceWatchlist(), { wrapper });
 
-    act(() => result.current.mutate(["msft", "nvda"]));
+    act(() => result.current.mutate({ tickers: ["msft", "nvda"], token: "test-token" }));
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(client.getQueryData(WATCHLIST_KEY)).toEqual({ tickers: ["MSFT", "NVDA"] });

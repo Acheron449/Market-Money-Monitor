@@ -282,7 +282,12 @@ def _txn_model(row: InsiderTxnData) -> InsiderTxn:
 
 
 async def signals_for(
-    session: AsyncSession, symbols: Sequence[str], as_of: date, lookback_months: int
+    session: AsyncSession,
+    symbols: Sequence[str],
+    as_of: date,
+    lookback_months: int,
+    *,
+    exclude_10b5_1: bool = False,
 ) -> dict[str, SignalResult]:
     start = shift_months(as_of, -lookback_months)
     rows = await session.scalars(
@@ -296,7 +301,12 @@ async def signals_for(
     for row in rows:
         grouped.setdefault(row.symbol, []).append(row)
     return {
-        symbol: compute_signal(items, as_of=as_of, lookback_months=lookback_months)
+        symbol: compute_signal(
+            items,
+            as_of=as_of,
+            lookback_months=lookback_months,
+            exclude_10b5_1=exclude_10b5_1,
+        )
         for symbol, items in grouped.items()
     }
 

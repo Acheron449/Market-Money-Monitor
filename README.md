@@ -54,11 +54,11 @@ data with a stale flag.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/api/dashboard` | Signals, quotes, tape, freshness |
+| GET | `/api/dashboard` | Signals, quotes, tape, freshness; `?exclude10b5_1=true` excludes plan sales |
 | GET | `/api/history/{ticker}` | Daily closes (6 months by default) |
 | GET | `/api/holders/{ticker}` | Top 13F holders |
 | POST | `/api/refresh` | Immediate run, 202, throttled to once per 30 s |
-| GET, PUT | `/api/watchlist` | Read or replace the watchlist (PUT needs the admin token from non-local hosts) |
+| GET, PUT | `/api/watchlist` | Read or replace the watchlist (PUT needs the admin token) |
 | GET | `/healthz`, `/readyz`, `/metrics` | Health, readiness, Prometheus |
 
 Response shapes are the TypeScript types in `docs/SRS.md` §7.2, mirrored in
@@ -84,8 +84,8 @@ opt-in.
 - **P3** — scheduler, market-hours guards, DB lock, freshness/stale flags: done; soak test pending.
 - **P4** — dashboard (tiles, tape, chart, holders, freshness, disclaimer, states): done; visual and
   axe review pending.
-- **P5** — SSE quote stream and new-filing toasts, watchlist API and editor: done. Alerts,
-  cluster/10b5-1 flags and SEC 13F data sets: not started.
+- **P5** — SSE quote stream and new-filing toasts, watchlist API and editor, cluster-buy flag
+  and 10b5-1 badge with exclusion toggle: done. Alerts and SEC 13F data sets: not started.
 - **P6** — load/failure tests, deployment: not started.
 
 UI-14 is descoped for v1.0: the Advanced Charts licence fails for a personal dashboard in a public

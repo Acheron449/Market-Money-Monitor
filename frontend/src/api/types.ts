@@ -5,6 +5,7 @@ export interface Signal {
   netValue: number;
   txnCount: number;
   starredCount: number;
+  clusterBuy: boolean;
 }
 
 export interface Quote {

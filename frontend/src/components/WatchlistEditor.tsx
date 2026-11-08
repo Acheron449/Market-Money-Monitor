@@ -11,17 +11,25 @@ export function WatchlistEditor({ onClose }: WatchlistEditorProps) {
   const watchlist = useWatchlist();
   const save = useReplaceWatchlist();
   const [symbol, setSymbol] = useState("");
+  const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const tickers = watchlist.data?.tickers ?? [];
   const busy = save.isPending;
 
   function persist(next: string[], onSaved?: () => void) {
+    if (!token.trim()) {
+      setError("Enter the admin token to save watchlist changes.");
+      return;
+    }
     setError(null);
-    save.mutate(next, {
-      onSuccess: () => onSaved?.(),
-      onError: (cause) =>
-        setError(cause instanceof Error ? cause.message : "Could not save the watchlist."),
-    });
+    save.mutate(
+      { tickers: next, token: token.trim() },
+      {
+        onSuccess: () => onSaved?.(),
+        onError: (cause) =>
+          setError(cause instanceof Error ? cause.message : "Could not save the watchlist."),
+      },
+    );
   }
 
   function add(event: FormEvent<HTMLFormElement>) {
@@ -118,6 +126,25 @@ export function WatchlistEditor({ onClose }: WatchlistEditorProps) {
                 className="mt-1 block w-36 rounded-md border border-line bg-bg/60 px-3 py-2 text-sm uppercase tracking-wide text-fg placeholder:normal-case placeholder:tracking-normal placeholder:text-muted/70 focus:border-champagne/60 disabled:opacity-60"
               />
             </div>
+            <div>
+              <label htmlFor="watchlist-token" className="label">
+                Admin token
+              </label>
+              <input
+                id="watchlist-token"
+                data-testid="watchlist-token"
+                type="password"
+                value={token}
+                onChange={(event) => {
+                  setToken(event.target.value);
+                  setError(null);
+                }}
+                autoComplete="off"
+                spellCheck={false}
+                disabled={busy}
+                className="mt-1 block w-44 rounded-md border border-line bg-bg/60 px-3 py-2 text-sm text-fg focus:border-champagne/60 disabled:opacity-60"
+              />
+            </div>
             <button
               type="submit"
               data-testid="watchlist-add"
@@ -126,6 +153,9 @@ export function WatchlistEditor({ onClose }: WatchlistEditorProps) {
             >
               {busy ? "Saving…" : "Add"}
             </button>
+            <p className="w-full text-xs text-muted">
+              Requires the server&apos;s ADMIN_TOKEN. It stays in this panel only.
+            </p>
           </form>
 
           {error ? (

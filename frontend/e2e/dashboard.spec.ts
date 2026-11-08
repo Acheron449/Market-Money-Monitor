@@ -68,6 +68,9 @@ test("seeded dashboard: tiles, tape filters, chart markers, drill-down, disclaim
 
   const tiles = page.getByTestId("tile");
   await expect(tiles).toHaveCount(8);
+  await expect(
+    page.locator('[data-testid="tile"][data-ticker="AMZN"]').getByTestId("tile-cluster"),
+  ).toBeVisible();
   const symbols = await tiles.evaluateAll((nodes) =>
     nodes.map((node) => node.getAttribute("data-ticker") ?? ""),
   );
@@ -172,6 +175,42 @@ test("seeded dashboard: tiles, tape filters, chart markers, drill-down, disclaim
     "For information only — not investment advice.",
   );
   await expect(page.getByText(/Form 4 filings can lag by up to two business days/)).toBeVisible();
+
+  expect(errors, "console, page or same-origin network errors").toEqual([]);
+});
+
+test("flags cluster buys and excludes 10b5-1 sales on demand", async ({ page }) => {
+  const errors = collectErrors(page);
+  await openDashboard(page);
+
+  const dashboard = (await (await page.request.get("/api/dashboard")).json()) as {
+    signals: { ticker: string; clusterBuy: boolean }[];
+  };
+  expect(dashboard.signals.find((signal) => signal.ticker === "AMZN")?.clusterBuy).toBe(true);
+  await expect(
+    page.locator('[data-testid="tile"][data-ticker="AMZN"]').getByTestId("tile-cluster"),
+  ).toBeVisible();
+
+  const coin = page.locator('[data-testid="tile"][data-ticker="COIN"]');
+  await expect(coin).toHaveAttribute("data-net", "-775500");
+  await expect(coin.getByTestId("tile-net")).toContainText("-$776K");
+
+  const toggle = page.getByTestId("exclude-10b5-1");
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+
+  await expect(coin).toHaveAttribute("data-net", "0");
+  await expect(coin.getByTestId("tile-net")).toContainText("$0");
+  await expect(coin).toContainText("1 txns");
+
+  // Excluding from net never removes the flagged row from the tape.
+  await coin.click();
+  await expect(page.getByTestId("tape-row")).toHaveCount(1);
+  await expect(page.getByTestId("tape-row").getByText("10b5-1")).toBeVisible();
+
+  await toggle.uncheck();
+  await expect(coin).toHaveAttribute("data-net", "-775500");
+  await expect(coin.getByTestId("tile-net")).toContainText("-$776K");
 
   expect(errors, "console, page or same-origin network errors").toEqual([]);
 });
@@ -309,6 +348,7 @@ test("watchlist editor persists additions, removals and order", async ({ page })
   await page.getByRole("button", { name: "Edit watchlist" }).click();
   await expect(page.getByTestId("watchlist-editor")).toBeVisible();
   await expect(page.getByTestId("watchlist-row")).toHaveCount(8);
+  await page.getByTestId("watchlist-token").fill("e2e-admin-token");
 
   // The editor stays inside a 360 px viewport.
   await page.setViewportSize({ width: 360, height: 780 });

@@ -32,12 +32,14 @@ async def test_dashboard_matches_contract(client: AsyncClient) -> None:
         "netValue": 50000.0,
         "txnCount": 2,
         "starredCount": 1,
+        "clusterBuy": False,
     }
     assert signals["AAPL"] == {
         "ticker": "AAPL",
         "netValue": 0.0,
         "txnCount": 0,
         "starredCount": 0,
+        "clusterBuy": False,
     }
 
     quote = body["quotes"]["NVDA"]
@@ -68,6 +70,29 @@ async def test_dashboard_matches_contract(client: AsyncClient) -> None:
     assert body["latestFilingDate"] is not None
     assert set(body["freshness"]) == {"quotes", "filings", "bars", "holders"}
     assert set(body["freshness"]["quotes"]) == {"asOf", "stale"}
+
+
+async def test_dashboard_can_exclude_10b5_1_sales_from_net(client: AsyncClient) -> None:
+    default = (await client.get("/api/dashboard")).json()
+    nvda = next(signal for signal in default["signals"] if signal["ticker"] == "NVDA")
+    assert nvda["netValue"] == 50000.0
+    assert nvda["txnCount"] == 2
+    assert any(row["is10b5_1"] for row in default["tape"])
+
+    response = await client.get("/api/dashboard?exclude10b5_1=true")
+    assert response.status_code == 200
+    body = response.json()
+    excluded = body["signals"]
+    nvda = next(signal for signal in excluded if signal["ticker"] == "NVDA")
+    assert nvda == {
+        "ticker": "NVDA",
+        "netValue": 100000.0,
+        "txnCount": 2,
+        "starredCount": 1,
+        "clusterBuy": False,
+    }
+    # The tape still carries the flagged row and its badge data.
+    assert any(row["is10b5_1"] for row in body["tape"])
 
 
 async def test_history_returns_ascending_closes(client: AsyncClient) -> None:

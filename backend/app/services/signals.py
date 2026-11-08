@@ -1,4 +1,4 @@
-"""Dollar-weighted signals over a lookback window (SIG-05 to SIG-08)."""
+"""Dollar-weighted signals over a lookback window (SIG-05 to SIG-10)."""
 
 from __future__ import annotations
 
@@ -17,6 +17,9 @@ class TxnLike(Protocol):
     action: str
     value: Decimal | None
     role: str
+    insider_cik: str | None
+    insider_name: str
+    is_10b5_1: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +29,7 @@ class SignalResult:
     sell_value: Decimal
     txn_count: int
     starred_count: int
+    cluster_buy: bool = False
 
 
 def shift_months(day: date, months: int) -> date:
@@ -43,17 +47,30 @@ def in_window(day: date, as_of: date, lookback_months: int) -> bool:
     return start <= day <= as_of
 
 
-def compute_signal(rows: Iterable[TxnLike], *, as_of: date, lookback_months: int) -> SignalResult:
-    """Only open-market P/S rows inside the window count; everything else is ignored."""
+def compute_signal(
+    rows: Iterable[TxnLike],
+    *,
+    as_of: date,
+    lookback_months: int,
+    exclude_10b5_1: bool = False,
+) -> SignalResult:
+    """Only open-market P/S rows inside the window count; everything else is ignored.
 
+    SIG-10's opt-in toggle removes 10b5-1 sales from net, sell value and txn count.
+    The tape still shows the rows and their badge.
+    """
+
+    windowed = [row for row in rows if in_window(row.txn_date, as_of, lookback_months)]
     buy = ZERO
     sell = ZERO
     count = 0
     starred = 0
-    for row in rows:
+    for row in windowed:
         if row.action not in {"buy", "sell"}:
             continue
-        if not in_window(row.txn_date, as_of, lookback_months):
+        if exclude_10b5_1 and row.action == "sell" and row.is_10b5_1:
+            # SIG-10 excludes the sale from net, while SIG-05 still counts the row.
+            count += 1
             continue
         amount = row.value or ZERO
         if row.action == "buy":
@@ -69,6 +86,7 @@ def compute_signal(rows: Iterable[TxnLike], *, as_of: date, lookback_months: int
         sell_value=sell,
         txn_count=count,
         starred_count=starred,
+        cluster_buy=cluster_buy_dates(windowed, as_of=as_of),
     )
 
 
@@ -83,11 +101,22 @@ def emphasis(net_value: Decimal) -> str:
     return "neutral"
 
 
-def cluster_buy_dates(rows: Sequence[TxnLike], *, as_of: date, window_days: int = 14) -> bool:
-    """SIG-09: three or more distinct buys inside any rolling 14-day window."""
+def _insider_key(row: TxnLike) -> str:
+    if row.insider_cik:
+        return f"cik:{row.insider_cik}"
+    return f"name:{row.insider_name.strip().upper()}"
 
-    buys = sorted(r.txn_date for r in rows if r.action == "buy" and r.txn_date <= as_of)
-    for index in range(len(buys) - 2):
-        if (buys[index + 2] - buys[index]).days <= window_days:
+
+def cluster_buy_dates(rows: Sequence[TxnLike], *, as_of: date, window_days: int = 14) -> bool:
+    """SIG-09: three or more distinct insiders buying inside a rolling 14-day window."""
+
+    buys = sorted(
+        (row.txn_date, _insider_key(row))
+        for row in rows
+        if row.action == "buy" and row.txn_date <= as_of
+    )
+    for index, (start, _) in enumerate(buys):
+        insiders = {key for day, key in buys[index:] if (day - start).days <= window_days}
+        if len(insiders) >= 3:
             return True
     return False

@@ -5,6 +5,11 @@ import type { Watchlist } from "../api/types";
 
 export const WATCHLIST_KEY = ["watchlist"] as const;
 
+export interface WatchlistWrite {
+  tickers: string[];
+  token: string;
+}
+
 export function useWatchlist() {
   return useQuery({
     queryKey: WATCHLIST_KEY,
@@ -23,8 +28,9 @@ export function useReplaceWatchlist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (tickers: string[]) => api.replaceWatchlist(tickers),
-    onMutate: async (tickers) => {
+    mutationFn: ({ tickers, token }: WatchlistWrite) =>
+      api.replaceWatchlist(tickers, token),
+    onMutate: async ({ tickers }) => {
       await queryClient.cancelQueries({ queryKey: WATCHLIST_KEY });
       const previous = queryClient.getQueryData<Watchlist>(WATCHLIST_KEY);
       queryClient.setQueryData<Watchlist>(WATCHLIST_KEY, { tickers });

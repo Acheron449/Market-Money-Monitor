@@ -66,7 +66,9 @@ const filing: Txn = {
 };
 
 const dashboard: Dashboard = {
-  signals: [{ ticker: "NVDA", netValue: 1000, txnCount: 1, starredCount: 0 }],
+  signals: [
+    { ticker: "NVDA", netValue: 1000, txnCount: 1, starredCount: 0, clusterBuy: false },
+  ],
   quotes: { NVDA: quote },
   tape: [],
   lookbackMonths: 6,
@@ -75,13 +77,13 @@ const dashboard: Dashboard = {
   freshness: { quotes: { asOf: quote.asOf, stale: false } },
 };
 
-function setup() {
+function setup(exclude10b5_1 = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  client.setQueryData(["dashboard"], dashboard);
+  client.setQueryData(["dashboard", exclude10b5_1], dashboard);
   function wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   }
-  const rendered = renderHook(() => useQuoteStream(true), { wrapper });
+  const rendered = renderHook(() => useQuoteStream(true, exclude10b5_1), { wrapper });
   const source = MockEventSource.instances.at(-1);
   if (!source) throw new Error("EventSource was not opened");
   return { client, source, ...rendered };
@@ -113,10 +115,25 @@ describe("useQuoteStream", () => {
       }),
     );
 
-    const cached = client.getQueryData<Dashboard>(["dashboard"]);
+    const cached = client.getQueryData<Dashboard>(["dashboard", false]);
     expect(cached?.quotes.NVDA?.price).toBe(190.25);
     expect(cached?.quotes.NVDA?.changePct).toBe(2.75);
     expect(result.current.status).toBe("live");
+  });
+
+  it("merges ticks into the dashboard variant used by the 10b5-1 toggle", () => {
+    const { client, source } = setup(true);
+    act(() => source.open());
+
+    act(() =>
+      source.emit("quotes", {
+        quotes: { NVDA: { ...quote, price: 191.5, changePct: 3.1 } },
+      }),
+    );
+
+    const cached = client.getQueryData<Dashboard>(["dashboard", true]);
+    expect(cached?.quotes.NVDA?.price).toBe(191.5);
+    expect(cached?.quotes.NVDA?.changePct).toBe(3.1);
   });
 
   it("turns new filings into toast notices and dismisses them", () => {
@@ -150,7 +167,7 @@ describe("useQuoteStream", () => {
       await vi.advanceTimersByTimeAsync(15_000);
     });
     expect(spy).toHaveBeenCalledTimes(2);
-    expect(client.getQueryData<Dashboard>(["dashboard"])?.quotes.NVDA?.price).toBe(182.5);
+    expect(client.getQueryData<Dashboard>(["dashboard", false])?.quotes.NVDA?.price).toBe(182.5);
 
     unmount();
     expect(source.closed).toBe(true);

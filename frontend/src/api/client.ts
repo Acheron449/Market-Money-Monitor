@@ -31,7 +31,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  dashboard: () => request<Dashboard>("/api/dashboard"),
+  dashboard: (exclude10b5_1 = false) =>
+    request<Dashboard>(
+      `/api/dashboard${exclude10b5_1 ? "?exclude10b5_1=true" : ""}`,
+    ),
   history: (ticker: string) => request<HistoryPoint[]>(`/api/history/${encodeURIComponent(ticker)}`),
   holders: (ticker: string) => request<Holder[]>(`/api/holders/${encodeURIComponent(ticker)}`),
   refresh: () =>
@@ -40,10 +43,13 @@ export const api = {
       headers: { "Content-Type": "application/json" },
     }),
   watchlist: () => request<Watchlist>("/api/watchlist"),
-  replaceWatchlist: (tickers: string[]) =>
+  replaceWatchlist: (tickers: string[], token: string) =>
     request<Watchlist>("/api/watchlist", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ tickers }),
     }),
 };

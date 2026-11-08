@@ -1,4 +1,4 @@
-"""GET/PUT /api/watchlist (UI-12; remote writes require ADM-02's admin token)."""
+"""GET/PUT /api/watchlist (UI-12; PUT is an ADM-02 admin endpoint)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_session, get_settings, require_admin_if_remote
+from app.api.deps import get_session, get_settings, require_admin
 from app.api.errors import ApiError
 from app.api.schemas import WatchlistIn, WatchlistOut
 from app.config import Settings
@@ -33,7 +33,7 @@ async def replace_watchlist(
     session: AsyncSession = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> WatchlistOut:
-    require_admin_if_remote(request, settings)
+    require_admin(request, settings)
 
     symbols: list[str] = []
     for raw in payload.tickers:

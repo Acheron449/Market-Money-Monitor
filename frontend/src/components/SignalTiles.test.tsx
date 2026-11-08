@@ -6,8 +6,14 @@ import type { Quote, Signal } from "../api/types";
 import { SignalTiles } from "./SignalTiles";
 
 const signals: Signal[] = [
-  { ticker: "NVDA", netValue: 12_000_000, txnCount: 4, starredCount: 2 },
-  { ticker: "TSLA", netValue: -11_000_000, txnCount: 3, starredCount: 0 },
+  {
+    ticker: "NVDA",
+    netValue: 12_000_000,
+    txnCount: 4,
+    starredCount: 2,
+    clusterBuy: true,
+  },
+  { ticker: "TSLA", netValue: -11_000_000, txnCount: 3, starredCount: 0, clusterBuy: false },
 ];
 
 const quotes: Record<string, Quote> = {
@@ -36,6 +42,7 @@ describe("SignalTiles", () => {
     expect(screen.getByText("+1.25%")).toBeInTheDocument();
     expect(screen.getByText("-2.10%")).toBeInTheDocument();
     expect(screen.getByText("4 txns")).toBeInTheDocument();
+    expect(screen.getByTestId("tile-cluster")).toHaveTextContent("Cluster");
   });
 
   it("marks the selected tile and reports selection", async () => {

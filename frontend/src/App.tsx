@@ -17,8 +17,9 @@ import { useQuoteStream } from "./hooks/useQuoteStream";
 
 export function App() {
   const queryClient = useQueryClient();
-  const dashboard = useDashboard();
-  const stream = useQuoteStream(dashboard.isSuccess);
+  const [exclude10b5_1, setExclude10b5_1] = useState(false);
+  const dashboard = useDashboard(exclude10b5_1);
+  const stream = useQuoteStream(dashboard.isSuccess, exclude10b5_1);
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState<TapeFilter>("all");
   const [editingWatchlist, setEditingWatchlist] = useState(false);
@@ -82,7 +83,21 @@ export function App() {
         <WatchlistEditor onClose={() => setEditingWatchlist(false)} />
       ) : null}
 
-      <div className="mt-5">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="label">Signals</h2>
+        <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-muted">
+          <input
+            type="checkbox"
+            data-testid="exclude-10b5-1"
+            checked={exclude10b5_1}
+            onChange={(event) => setExclude10b5_1(event.target.checked)}
+            className="h-4 w-4 accent-champagne"
+          />
+          Exclude 10b5-1 sales from net
+        </label>
+      </div>
+
+      <div className="mt-2">
         {signals.length === 0 ? (
           <p role="status" className="panel p-6 text-sm text-muted">
             The watchlist is empty. Add tickers with the watchlist editor.

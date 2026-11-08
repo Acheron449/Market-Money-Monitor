@@ -28,16 +28,24 @@ const MAX_TOASTS = 3;
  * AUT-07: fresh Form 4 rows arrive as `filings` frames, become toast notices
  * and invalidate the dashboard so the tape and signals catch up.
  */
-export function useQuoteStream(enabled: boolean): MarketStreamState {
+export function useQuoteStream(
+  enabled: boolean,
+  exclude10b5_1 = false,
+): MarketStreamState {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<StreamStatus>("connecting");
   const [filings, setFilings] = useState<FilingNotice[]>([]);
   const pollTimer = useRef<number | null>(null);
   const sequence = useRef(0);
+  const excludeRef = useRef(exclude10b5_1);
 
   const dismissFiling = useCallback((noticeId: string) => {
     setFilings((current) => current.filter((filing) => filing.noticeId !== noticeId));
   }, []);
+
+  useEffect(() => {
+    excludeRef.current = exclude10b5_1;
+  }, [exclude10b5_1]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -55,8 +63,9 @@ export function useQuoteStream(enabled: boolean): MarketStreamState {
     const poll = async () => {
       if (document.visibilityState === "hidden") return;
       try {
-        const dashboard = await api.dashboard();
-        if (!cancelled) queryClient.setQueryData(["dashboard"], dashboard);
+        const excluded = excludeRef.current;
+        const dashboard = await api.dashboard(excluded);
+        if (!cancelled) queryClient.setQueryData(["dashboard", excluded], dashboard);
       } catch {
         // Keep the last good snapshot; the next tick retries.
       }
@@ -82,7 +91,7 @@ export function useQuoteStream(enabled: boolean): MarketStreamState {
         const payload = JSON.parse((event as MessageEvent).data as string) as {
           quotes: Record<string, Quote>;
         };
-        queryClient.setQueryData<Dashboard>(["dashboard"], (current) =>
+        queryClient.setQueriesData<Dashboard>({ queryKey: ["dashboard"] }, (current) =>
           mergeQuotes(current, payload.quotes),
         );
         setStatus("live");

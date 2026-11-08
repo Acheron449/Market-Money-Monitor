@@ -10,6 +10,7 @@ class SignalOut(BaseModel):
     netValue: float
     txnCount: int
     starredCount: int
+    clusterBuy: bool = False
 
 
 class QuoteOut(BaseModel):

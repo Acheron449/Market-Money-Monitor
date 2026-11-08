@@ -119,7 +119,7 @@ Priority: **M** = must (v1.0), **S** = should (v1.x), **C** = could.
 | SIG-07 | Tile emphasis shall be sign-aware: | net |
 | SIG-08 | Signals shall be recomputed after every insider ingest, in under 1 s for 50 tickers | M |
 | SIG-09 | Flag a cluster buy when three or more distinct insiders make open-market buys within 14 days | S |
-| SIG-10 | Flag sales made under a Rule 10b5-1 plan; show a badge and offer a toggle to exclude them from net | S |
+| SIG-10 | Flag sales made under a Rule 10b5-1 plan; show a badge and offer a toggle to exclude them from net (included by default) | S |
 | SIG-11 | A drill-down shall list the exact rows that make up a ticker’s net signal | C |
 
 ### 5.3 Dashboard UI (UI)
@@ -127,7 +127,7 @@ Priority: **M** = must (v1.0), **S** = should (v1.x), **C** = could.
 | ID | Requirement | Pri |
 | --- | --- | --- |
 | UI-01 | Header: logo mark, title “Smart Money Monitor”, small-caps subtitle “insiders & institutions”, latest filing as relative days, Refresh button that spins while pending | M |
-| UI-02 | Signal tiles (2 / 4 / 8 columns by breakpoint), one per ticker: symbol, day change %, signed compact net value, “N txns · net”, ★ count. Click selects the ticker; the selected tile has a champagne ring | M |
+| UI-02 | Signal tiles (2 / 4 / 8 columns by breakpoint), one per ticker: symbol, day change %, signed compact net value, “N txns · net”, ★ count and a cluster-buy badge when SIG-09 applies. Click selects the ticker; the selected tile has a champagne ring | M |
 | UI-03 | Insider tape for the selected ticker with columns Date, Insider (name, role badge, ★), Type badge, Shares, Value; sticky header; scrolls inside its panel | M |
 | UI-04 | Tape filters: All, Buys only, C-suite (CEO or CFO); empty-state message when nothing matches | M |
 | UI-05 | Non-open-market rows render dimmed (45% opacity); the tape caption explains the exclusion and the ★ meaning | M |
@@ -215,7 +215,7 @@ Paths match the example so its front-end works unchanged; items marked new are a
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET | /api/dashboard | Signals, quotes, tape, lookbackMonths, latestFilingDate, generatedAt and freshness (new) |
+| GET | /api/dashboard | Signals, quotes, tape, lookbackMonths, latestFilingDate, generatedAt and freshness (new); optional `exclude10b5_1=true` for SIG-10 |
 | GET | /api/history/{ticker} | Daily closes, default range 6 months |
 | GET | /api/holders/{ticker} | Top holders, default limit 10 |
 | POST | /api/refresh | Trigger an immediate refresh; 202 with job id; throttled |
@@ -227,7 +227,7 @@ Paths match the example so its front-end works unchanged; items marked new are a
 
 ```typescript
 type Dashboard = { signals: Signal[]; quotes: Record<string, Quote>; tape: Txn[]; lookbackMonths: number; latestFilingDate: string | null; generatedAt: string; freshness: Record<string, { asOf: string; stale: boolean }> }
-type Signal = { ticker: string; netValue: number; txnCount: number; starredCount: number }
+type Signal = { ticker: string; netValue: number; txnCount: number; starredCount: number; clusterBuy: boolean }
 type Quote = { price: number; changePct: number; asOf: string; source: string; delayed: boolean }
 type Txn = { key: string; ticker: string; date: string; name: string; role: string | null; action: 'buy' | 'sell' | 'other'; typeLabel: string; shares: number; value: number | null; starred: boolean; is10b5_1?: boolean }
 type History = { date: string; close: number }[]

@@ -12,7 +12,9 @@ const baseQuote: Quote = {
 };
 
 const dashboard: Dashboard = {
-  signals: [{ ticker: "NVDA", netValue: 1000, txnCount: 1, starredCount: 0 }],
+  signals: [
+    { ticker: "NVDA", netValue: 1000, txnCount: 1, starredCount: 0, clusterBuy: false },
+  ],
   quotes: { NVDA: baseQuote },
   tape: [],
   lookbackMonths: 6,
