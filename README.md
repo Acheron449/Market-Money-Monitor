@@ -84,6 +84,25 @@ The run is recorded as an `edgar_reconciliation` job and each difference is pers
 `reconciliation_mismatch`; the command exits non-zero when any field differs. The latest run is
 served by `GET /api/data-quality` and shown in the Data Quality panel.
 
+## Load test
+
+AC-05 measures NFR-01 against a running backend. The harness models 50 concurrent browser users:
+each client requests `/api/dashboard` three times, waits a 1 s think time between requests, and
+successive clients start 20 ms apart so the run reflects a user population rather than one
+synchronised burst. It warms the endpoint first and reports throughput plus p50/p95/p99 latency.
+The gate is p95 ≤ 300 ms with zero failed requests; the command exits non-zero otherwise. It only
+reads the API, so no provider credentials or external network calls are involved.
+
+```bash
+cd backend
+uv run python scripts/load_test.py --url http://127.0.0.1:8010 \
+  --users 50 --requests 3 --think-time-ms 1000 --ramp-ms 20
+```
+
+`--think-time-ms 0 --ramp-ms 0` turns the same harness into a raw burst measurement, and
+`--max-p95-ms` moves the budget. The E2E suite runs this command against the seeded server on port
+8010 and then re-checks the endpoint from a real browser.
+
 ## API
 
 | Method | Path | Purpose |
@@ -124,8 +143,8 @@ opt-in.
   and 10b5-1 badge with exclusion toggle, alerts to email/Telegram/webhook with persisted
   history, SEC insider/13F bulk backfills, and the daily second-provider insider cross-check:
   done.
-- **P6** — EDGAR Form 4 reconciliation (AC-01): done; load/failure injection, accessibility scan
-  and deployment: not started.
+- **P6** — EDGAR Form 4 reconciliation (AC-01) and the NFR-01 load test (AC-05): done; failure
+  injection, accessibility scan and deployment: not started.
 
 UI-14 is descoped for v1.0: the Advanced Charts licence fails for a personal dashboard in a public
 repository (ADR-003). UI-06 stays on Recharts and is the authoritative marker geometry.

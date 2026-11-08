@@ -3,6 +3,8 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { meetsLatencyBudget } from "../src/lib/latency";
+
 const SHOTS = path.join(process.cwd(), "e2e", "screenshots");
 const BACKEND = path.join(process.cwd(), "..", "backend");
 const IGNORED_NETWORK = /fonts\.(googleapis|gstatic)\.com/;
@@ -24,6 +26,32 @@ function writeQuote(symbol: string, price: number, changePct: number): void {
     timeout: 30_000,
     stdio: "pipe",
   });
+}
+
+function runLoadTest(): string {
+  return execFileSync(
+    "uv",
+    [
+      "run",
+      "python",
+      "scripts/load_test.py",
+      "--url",
+      "http://127.0.0.1:8010",
+      "--users",
+      "50",
+      "--requests",
+      "3",
+      "--warmup",
+      "20",
+      "--think-time-ms",
+      "1000",
+      "--ramp-ms",
+      "20",
+      "--max-p95-ms",
+      "300",
+    ],
+    { cwd: BACKEND, timeout: 120_000, encoding: "utf8", stdio: "pipe" },
+  );
 }
 
 function runReconciliation(): void {
@@ -504,6 +532,39 @@ test("toasts a new Form 4 and refreshes the tape", async ({ page }) => {
 
   await page.getByRole("button", { name: "Dismiss NVDA filing" }).click();
   await expect(toast).toHaveCount(0);
+
+  expect(errors, "console, page or same-origin network errors").toEqual([]);
+});
+
+test("serves the dashboard inside the NFR-01 budget at 50 concurrent users", async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+
+  const output = runLoadTest();
+  expect(output).toContain("50 users x 3 requests (150 total");
+  expect(output).toContain("0 errors");
+  expect(output).toContain("pass");
+  const measured = Number(/p95 ([\d.]+) ms/.exec(output)?.[1]);
+  expect(measured).toBeGreaterThan(0);
+  expect(measured).toBeLessThanOrEqual(300);
+
+  // The real browser still renders, and the same endpoint answers inside the
+  // budget for sequential browser fetches after the concurrent run.
+  await openDashboard(page);
+  const samples = await page.evaluate(async () => {
+    const values: number[] = [];
+    for (let index = 0; index < 20; index += 1) {
+      const started = performance.now();
+      const response = await fetch("/api/dashboard");
+      if (!response.ok) throw new Error(`dashboard responded ${response.status}`);
+      await response.json();
+      values.push(performance.now() - started);
+    }
+    return values;
+  });
+  expect(samples).toHaveLength(20);
+  expect(meetsLatencyBudget(samples, 300)).toBe(true);
 
   expect(errors, "console, page or same-origin network errors").toEqual([]);
 });

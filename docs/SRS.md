@@ -307,6 +307,13 @@ Errors use a JSON body with code and message. A failed provider never produces a
 | AC-09 | Each ADM-03 trigger creates one deduplicated alert; configured channels receive it and failures do not fail ingestion |
 | AC-10 | The bulk loaders import local Insider Transactions and Form 13F archives idempotently, and the daily cross-check persists and logs only shares/value differences above 1% |
 
+AC-05 is measured by `backend/scripts/load_test.py`, which drives `/api/dashboard` with 50
+concurrent clients against the seeded backend. Each virtual user issues three requests with a 1 s
+think time, and client starts are staggered by 20 ms to model a user population instead of one
+synchronised burst; the run reports throughput and p50/p95/p99 latency and fails when any request
+errors or p95 exceeds the 300 ms budget. `--think-time-ms 0 --ramp-ms 0` runs the same harness as a
+raw burst measurement. No provider credentials or network calls are involved.
+
 AC-01 is implemented as an offline snapshot rather than a second EDGAR fetch:
 `backend/scripts/reconcile_edgar.py` re-parses `backend/tests/fixtures/reconciliation/`, which holds
 five frozen Form 4 documents for each watchlist ticker plus the values EDGAR reports for them. The
