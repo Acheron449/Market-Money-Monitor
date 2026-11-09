@@ -23,7 +23,7 @@ export function ErrorState({ message, onRetry }: ErrorStateProps) {
 
 export function DashboardSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading dashboard" className="space-y-5">
+    <div role="status" aria-busy="true" aria-label="Loading dashboard" className="space-y-5">
       <div className="skeleton h-16 w-full" />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
         {Array.from({ length: 8 }, (_, index) => (

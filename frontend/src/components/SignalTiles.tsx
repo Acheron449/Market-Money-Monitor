@@ -63,7 +63,9 @@ export function SignalTiles({ signals, quotes, selected, onSelect }: SignalTiles
                 <span className="tnum">{signal.txnCount} txns</span>
                 {quote ? (
                   <span
+                    role="img"
                     data-testid="tile-source"
+                    aria-label={`Quote source: ${quote.source}`}
                     title={`Quote source: ${quote.source}`}
                     className="rounded border border-line px-1 py-0.5 text-[10px] uppercase tracking-wide"
                   >
@@ -74,6 +76,7 @@ export function SignalTiles({ signals, quotes, selected, onSelect }: SignalTiles
               <div className="flex items-center gap-1.5">
                 {signal.clusterBuy ? (
                   <span
+                    role="img"
                     data-testid="tile-cluster"
                     aria-label="Cluster buy: three or more insiders bought within 14 days"
                     className="rounded border border-champagne/50 bg-champagne/10 px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-champagne"

@@ -150,7 +150,7 @@ Never do any of the following:
 - Required coverage: at least 85% on `parsers/` and `services/`.
 - Contract tests assert the response shapes in SRS 7.2; changing a shape means updating the contract tests, the frontend types and the SRS in the same PR.
 - Market-calendar tests must include Thanksgiving, Christmas, New Year and early-close days.
-- Frontend: component tests for tiles, tape filters, chart markers and empty/error states; an axe accessibility check in CI (the TradingView iframe is checked by hand, since axe cannot inspect inside it).
+- Frontend: component tests for tiles, tape filters, chart markers and empty/error states; an axe accessibility scan in `e2e/a11y.spec.ts` covering populated, panel, loading, empty and stale states, plus keyboard coverage in `e2e/keyboard.spec.ts`. Both run in the Playwright suite; never disable an axe rule or exclude an element to pass.
 - Integration tests (marked `integration`) may call real providers and are never required in CI.
 
 ## 9. Auto-update behaviour (SRS 5.4)

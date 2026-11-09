@@ -14,8 +14,15 @@ interface FreshnessBarProps {
 }
 
 export function FreshnessBar({ freshness, lookbackMonths }: FreshnessBarProps) {
+  const staleSources = SOURCES.filter((source) => freshness[source.key]?.stale ?? true).map(
+    (source) => source.label,
+  );
+
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
+    <section
+      aria-label="Data freshness"
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted"
+    >
       <span className="label">freshness</span>
       {SOURCES.map((source) => {
         const entry = freshness[source.key];
@@ -44,6 +51,15 @@ export function FreshnessBar({ freshness, lookbackMonths }: FreshnessBarProps) {
         );
       })}
       <span className="ml-auto">Lookback {lookbackMonths} months</span>
-    </div>
+      <p
+        aria-live="polite"
+        data-testid="freshness-announcement"
+        className="sr-only"
+      >
+        {staleSources.length === 0
+          ? "All data is current."
+          : `Stale data: ${staleSources.join(", ")}.`}
+      </p>
+    </section>
   );
 }

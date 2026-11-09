@@ -19,6 +19,9 @@ describe("FreshnessBar", () => {
     expect(screen.queryByTestId("freshness-stale-filings")).toBeNull();
     expect(screen.getByTestId("freshness-filings")).toHaveTextContent("Filings");
     expect(screen.getByText("Lookback 6 months")).toBeInTheDocument();
+    expect(screen.getByTestId("freshness-announcement")).toHaveTextContent(
+      "Stale data: Quotes, Bars, Holders.",
+    );
   });
 
   it("treats a missing source entry as stale", () => {
@@ -26,5 +29,18 @@ describe("FreshnessBar", () => {
 
     expect(screen.getByTestId("freshness-stale-quotes")).toBeVisible();
     expect(screen.getByTestId("freshness-stale-holders")).toBeVisible();
+    expect(screen.getByTestId("freshness-announcement")).toHaveTextContent(
+      "Stale data: Quotes, Filings, Bars, Holders.",
+    );
+  });
+
+  it("announces a fully fresh dashboard", () => {
+    const fresh = Object.fromEntries(
+      Object.keys(freshness).map((key) => [key, { asOf: "2026-11-08T12:00:00Z", stale: false }]),
+    );
+    render(<FreshnessBar freshness={fresh} lookbackMonths={6} />);
+
+    expect(screen.queryByTestId("freshness-stale-quotes")).toBeNull();
+    expect(screen.getByTestId("freshness-announcement")).toHaveTextContent("All data is current.");
   });
 });

@@ -4,9 +4,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { meetsLatencyBudget } from "../src/lib/latency";
+import { BACKEND, runFailureDrill } from "./failure-drill";
 
 const SHOTS = path.join(process.cwd(), "e2e", "screenshots");
-const BACKEND = path.join(process.cwd(), "..", "backend");
 const IGNORED_NETWORK = /fonts\.(googleapis|gstatic)\.com/;
 
 /** Mutate the seeded quote row so the SSE stream has a real tick to publish. */
@@ -59,16 +59,6 @@ function runReconciliation(): void {
     cwd: BACKEND,
     env: { ...process.env, DATABASE_URL: "sqlite+aiosqlite:///./e2e.db" },
     timeout: 30_000,
-    stdio: "pipe",
-  });
-}
-
-function runFailureDrill(mode: "fallback" | "outage"): string {
-  return execFileSync("uv", ["run", "python", "scripts/e2e_failure_drill.py", "--mode", mode], {
-    cwd: BACKEND,
-    env: { ...process.env, DATABASE_URL: "sqlite+aiosqlite:///./e2e.db" },
-    timeout: 30_000,
-    encoding: "utf8",
     stdio: "pipe",
   });
 }

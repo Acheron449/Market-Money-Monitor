@@ -316,6 +316,16 @@ freshness window so `freshness.quotes.stale` is true and the UI shows the stale 
 error page. The SSE merge only clears the stale flag for a tick whose `asOf` is newer than the
 stored freshness entry, so replaying last-good rows cannot hide an outage.
 
+AC-07 is enforced by `frontend/e2e/a11y.spec.ts`, which runs axe-core with the WCAG 2.1 A/AA rule
+set against the rendered dashboard in five states: populated, the alert/data-quality/watchlist
+panels open, the loading skeleton, an empty watchlist, and last-good quotes made stale by the
+outage drill. Serious and critical findings fail the run, and no rule is disabled and no element
+excluded, so the scan stays a real gate. `frontend/e2e/keyboard.spec.ts` presses Tab through the
+page, asserts a visible focus ring at every stop, and operates the signal tiles, tape filters, the
+10b5-1 toggle and the watchlist editor from the keyboard. The freshness bar announces stale
+sources through a polite live region, and the quote-source chip and stale badge expose text and
+ARIA names, so state is never conveyed by colour alone (NFR-07).
+
 AC-05 is measured by `backend/scripts/load_test.py`, which drives `/api/dashboard` with 50
 concurrent clients against the seeded backend. Each virtual user issues three requests with a 1 s
 think time, and client starts are staggered by 20 ms to model a user population instead of one

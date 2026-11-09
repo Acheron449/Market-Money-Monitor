@@ -45,6 +45,7 @@ describe("SignalTiles", () => {
     expect(screen.getByTestId("tile-cluster")).toHaveTextContent("Cluster");
     expect(screen.getAllByTestId("tile-source")).toHaveLength(2);
     expect(screen.getAllByTestId("tile-source")[0]).toHaveTextContent("alpaca");
+    expect(screen.getAllByTestId("tile-source")[0]).toHaveAccessibleName("Quote source: alpaca");
   });
 
   it("marks the selected tile and reports selection", async () => {
