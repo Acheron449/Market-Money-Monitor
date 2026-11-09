@@ -5,6 +5,7 @@ watchlist of US equities, turns them into dollar-weighted signals, and keeps its
 SEC EDGAR, Alpaca, Finnhub and yfinance.
 
 Requirements: [`docs/SRS.md`](docs/SRS.md) · Plan: [`docs/TIMELINE.md`](docs/TIMELINE.md) ·
+Release notes: [`docs/RELEASE_NOTES.md`](docs/RELEASE_NOTES.md) ·
 TradingView decision: [`docs/TRADINGVIEW.md`](docs/TRADINGVIEW.md) and
 [`docs/adr/003-chart-library.md`](docs/adr/003-chart-library.md).
 
@@ -198,9 +199,10 @@ opt-in.
   history, SEC insider/13F bulk backfills, and the daily second-provider insider cross-check:
   done.
 - **P6** — EDGAR Form 4 reconciliation (AC-01), the NFR-01 load test (AC-05), provider failure
-  injection (AC-03, AC-04), the accessibility scan (AC-07) and deployment (production images,
-  migrations on start, health checks, runbook, smoke test): done; release notes and the v1.0 tag
-  remain.
+  injection (AC-03, AC-04), the accessibility scan (AC-07), deployment (production images,
+  migrations on start, health checks, runbook, smoke test) and the 1.0.0 release with annotated tag
+  `v1.0` ([notes](docs/RELEASE_NOTES.md)): done. A hosted deployment and the manual visual-parity
+  review (AC-06) remain open.
 
 UI-14 is descoped for v1.0: the Advanced Charts licence fails for a personal dashboard in a public
 repository (ADR-003). UI-06 stays on Recharts and is the authoritative marker geometry.

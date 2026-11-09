@@ -343,6 +343,11 @@ nginx serves the hashed bundle with SPA fallback and proxies `/api`, `/healthz`,
 built bundle against a migrated, production-configured backend and checks health, hashed assets,
 SPA fallback, the dashboard and AC-07 in that shape.
 
+Release 1.0.0 is tagged `v1.0`; [`RELEASE_NOTES.md`](RELEASE_NOTES.md) records the shipped scope,
+the acceptance evidence for AC-01 to AC-10, deployment and upgrade notes, and the known
+limitations (AC-06 visual parity and a hosted deployment remain manual/user steps). The versions in
+`backend/pyproject.toml`, `frontend/package.json` and the FastAPI app move together with the tag.
+
 AC-01 is implemented as an offline snapshot rather than a second EDGAR fetch:
 `backend/scripts/reconcile_edgar.py` re-parses `backend/tests/fixtures/reconciliation/`, which holds
 five frozen Form 4 documents for each watchlist ticker plus the values EDGAR reports for them. The
