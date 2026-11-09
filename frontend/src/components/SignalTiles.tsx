@@ -59,7 +59,18 @@ export function SignalTiles({ signals, quotes, selected, onSelect }: SignalTiles
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-              <span className="tnum">{signal.txnCount} txns</span>
+              <div className="flex items-center gap-1.5">
+                <span className="tnum">{signal.txnCount} txns</span>
+                {quote ? (
+                  <span
+                    data-testid="tile-source"
+                    title={`Quote source: ${quote.source}`}
+                    className="rounded border border-line px-1 py-0.5 text-[10px] uppercase tracking-wide"
+                  >
+                    {quote.source}
+                  </span>
+                ) : null}
+              </div>
               <div className="flex items-center gap-1.5">
                 {signal.clusterBuy ? (
                   <span

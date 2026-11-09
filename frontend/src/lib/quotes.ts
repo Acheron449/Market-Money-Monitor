@@ -2,8 +2,10 @@ import type { Dashboard, Quote } from "../api/types";
 
 /**
  * Merge an SSE quote frame into the cached dashboard. Only the incoming symbols
- * change; the quotes freshness entry follows the newest asOf so the bar stops
- * showing a stale quote source while the stream is healthy.
+ * change, and a tick can only make quotes fresher when its asOf is newer than
+ * the stored freshness entry. During a provider outage the stream keeps
+ * replaying the last-good rows with an old asOf, which must not clear the stale
+ * badge (AC-04).
  */
 export function mergeQuotes(
   current: Dashboard | undefined,
@@ -17,6 +19,9 @@ export function mergeQuotes(
     null,
   );
   if (latest === null) return { ...current, quotes };
+
+  const stored = current.freshness.quotes?.asOf ?? null;
+  if (stored !== null && latest <= stored) return { ...current, quotes };
 
   return {
     ...current,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -39,6 +40,20 @@ class ProviderRegistry:
     async def close(self) -> None:
         for client in self._clients:
             await client.close()
+
+    def disable(self, names: Sequence[str]) -> None:
+        """Drop providers named in ``names`` from every chain (AC-03)."""
+
+        blocked = {name.strip().lower() for name in names if name.strip()}
+        if not blocked:
+            return
+        for attribute in ("quotes", "bars", "insiders", "holders"):
+            kept = [
+                provider
+                for provider in getattr(self, attribute)
+                if str(getattr(provider, "name", "")).lower() not in blocked
+            ]
+            setattr(self, attribute, kept)
 
 
 def build_registry(settings: Settings, config: RuntimeConfig) -> ProviderRegistry:
@@ -98,4 +113,5 @@ def build_registry(settings: Settings, config: RuntimeConfig) -> ProviderRegistr
     _sort(registry.bars, "bars")
     _sort(registry.insiders, "insiders")
     _sort(registry.holders, "holders")
+    registry.disable(config.disabled_providers or settings.parsed_disabled_providers)
     return registry

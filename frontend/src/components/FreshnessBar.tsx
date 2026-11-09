@@ -21,7 +21,11 @@ export function FreshnessBar({ freshness, lookbackMonths }: FreshnessBarProps) {
         const entry = freshness[source.key];
         const stale = entry?.stale ?? true;
         return (
-          <span key={source.key} className="inline-flex items-center gap-1.5">
+          <span
+            key={source.key}
+            data-testid={`freshness-${source.key}`}
+            className="inline-flex items-center gap-1.5"
+          >
             <span
               aria-hidden="true"
               className={`h-1.5 w-1.5 rounded-full ${stale ? "bg-sell" : "bg-buy"}`}
@@ -29,7 +33,10 @@ export function FreshnessBar({ freshness, lookbackMonths }: FreshnessBarProps) {
             <span>{source.label}</span>
             <span className="tnum text-fg/80">{relativeTime(entry?.asOf ?? null)}</span>
             {stale ? (
-              <span className="rounded border border-sell/40 px-1 py-0.5 text-[10px] uppercase tracking-wide text-sell">
+              <span
+                data-testid={`freshness-stale-${source.key}`}
+                className="rounded border border-sell/40 px-1 py-0.5 text-[10px] uppercase tracking-wide text-sell"
+              >
                 Stale
               </span>
             ) : null}

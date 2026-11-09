@@ -43,6 +43,8 @@ describe("SignalTiles", () => {
     expect(screen.getByText("-2.10%")).toBeInTheDocument();
     expect(screen.getByText("4 txns")).toBeInTheDocument();
     expect(screen.getByTestId("tile-cluster")).toHaveTextContent("Cluster");
+    expect(screen.getAllByTestId("tile-source")).toHaveLength(2);
+    expect(screen.getAllByTestId("tile-source")[0]).toHaveTextContent("alpaca");
   });
 
   it("marks the selected tile and reports selection", async () => {

@@ -307,6 +307,15 @@ Errors use a JSON body with code and message. A failed provider never produces a
 | AC-09 | Each ADM-03 trigger creates one deduplicated alert; configured channels receive it and failures do not fail ingestion |
 | AC-10 | The bulk loaders import local Insider Transactions and Form 13F archives idempotently, and the daily cross-check persists and logs only shares/value differences above 1% |
 
+AC-03 and AC-04 are exercised by `backend/scripts/e2e_failure_drill.py` against the seeded
+database. `--mode fallback` starts from a two-provider quote chain, removes the primary through
+`disabled_providers` (environment `DISABLED_PROVIDERS` or the YAML key of the same name), and runs
+one real ingest cycle, so the stored quotes carry the fallback's `source` and every tile shows it.
+`--mode outage` fails every provider, proves the last-good quotes survive, and ages them past the
+freshness window so `freshness.quotes.stale` is true and the UI shows the stale badge without an
+error page. The SSE merge only clears the stale flag for a tick whose `asOf` is newer than the
+stored freshness entry, so replaying last-good rows cannot hide an outage.
+
 AC-05 is measured by `backend/scripts/load_test.py`, which drives `/api/dashboard` with 50
 concurrent clients against the seeded backend. Each virtual user issues three requests with a 1 s
 think time, and client starts are staggered by 20 ms to model a user population instead of one

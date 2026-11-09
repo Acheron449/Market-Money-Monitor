@@ -54,6 +54,8 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
     providers_enabled: bool = True
+    # Comma separated provider names dropped from every chain (AC-03 drills).
+    disabled_providers: str = ""
     refresh_throttle_seconds: int = 30
     quote_stale_seconds: int = 60
     # AUT-03: SSE cadence. Polling is a store read, never a provider call.
@@ -70,6 +72,13 @@ class Settings(BaseSettings):
     @property
     def parsed_cors_origins(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def parsed_disabled_providers(self) -> list[str]:
+        raw = self.disabled_providers.strip()
+        if not raw:
+            return []
+        return [name.strip().lower() for name in raw.split(",") if name.strip()]
 
     @property
     def is_sqlite(self) -> bool:
@@ -91,6 +100,7 @@ class RuntimeConfig(BaseModel):
 
     watchlist: list[str] = Field(default_factory=lambda: list(DEFAULT_WATCHLIST))
     lookback_months: int = 6
+    disabled_providers: list[str] = Field(default_factory=list)
     provider_order: dict[str, list[str]] = Field(
         default_factory=lambda: {
             "quotes": ["alpaca", "finnhub", "yfinance"],
@@ -124,10 +134,16 @@ def load_runtime_config(settings: Settings) -> RuntimeConfig:
 
     provider_order = raw.get("provider_order")
     cadences = raw.get("cadences")
+    configured_disabled = raw.get("disabled_providers")
+    if isinstance(configured_disabled, list):
+        disabled = [str(name).strip().lower() for name in configured_disabled if str(name).strip()]
+    else:
+        disabled = settings.parsed_disabled_providers
 
     return RuntimeConfig(
         watchlist=symbols,
         lookback_months=lookback_months,
+        disabled_providers=disabled,
         provider_order=provider_order if isinstance(provider_order, dict) else {},
         cadences=Cadences.model_validate(cadences) if isinstance(cadences, dict) else Cadences(),
     )

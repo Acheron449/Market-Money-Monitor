@@ -63,6 +63,16 @@ function runReconciliation(): void {
   });
 }
 
+function runFailureDrill(mode: "fallback" | "outage"): string {
+  return execFileSync("uv", ["run", "python", "scripts/e2e_failure_drill.py", "--mode", mode], {
+    cwd: BACKEND,
+    env: { ...process.env, DATABASE_URL: "sqlite+aiosqlite:///./e2e.db" },
+    timeout: 30_000,
+    encoding: "utf8",
+    stdio: "pipe",
+  });
+}
+
 function loadDataQualityFixtures(): void {
   execFileSync("uv", ["run", "python", "scripts/e2e_data_quality.py"], {
     cwd: BACKEND,
@@ -622,6 +632,55 @@ test("shows SEC 13F backfill and insider cross-check discrepancies", async ({ pa
   await expect(panel.getByText("20.0%").first()).toBeVisible();
 
   // The reload above deliberately tears down the open SSE stream.
+  const unexpected = errors.filter(
+    (error) => !(error.includes("/api/stream") && error.includes("net::ERR_ABORTED")),
+  );
+  expect(unexpected, "unexpected console, page or same-origin network errors").toEqual([]);
+});
+
+test("falls back to the next quote provider and keeps stale data on a full outage", async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await openDashboard(page);
+
+  // AC-03: the primary provider is disabled and the next one serves the cycle.
+  const fallback = runFailureDrill("fallback");
+  expect(fallback).toContain("fallback: finnhub served 8 quotes (alpaca disabled)");
+  await page.reload();
+
+  const nvda = page.locator('[data-testid="tile"][data-ticker="NVDA"]');
+  await expect(nvda.getByTestId("tile-source")).toHaveText("finnhub");
+  await expect(nvda).toContainText("+3.33%");
+  await expect(page.getByTestId("tile-source").first()).toHaveText("finnhub");
+  await expect(page.getByTestId("freshness-stale-quotes")).toHaveCount(0);
+
+  const served = (await (await page.request.get("/api/dashboard")).json()) as {
+    quotes: Record<string, { price: number; source: string }>;
+    freshness: Record<string, { stale: boolean }>;
+  };
+  expect(served.quotes.NVDA?.source).toBe("finnhub");
+  expect(served.quotes.NVDA?.price).toBeCloseTo(199.99, 2);
+  expect(served.freshness.quotes?.stale).toBe(false);
+
+  // AC-04: every provider fails; the last good quotes stay and go stale.
+  const outage = runFailureDrill("outage");
+  expect(outage).toContain("outage: last-good kept");
+  await page.reload();
+
+  await expect(page.getByTestId("tile")).toHaveCount(8);
+  await expect(nvda.getByTestId("tile-source")).toHaveText("finnhub");
+  await expect(nvda).toContainText("+3.33%");
+  await expect(page.getByTestId("freshness-stale-quotes")).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+
+  const stale = (await (await page.request.get("/api/dashboard")).json()) as {
+    quotes: Record<string, { price: number }>;
+    freshness: Record<string, { stale: boolean }>;
+  };
+  expect(stale.quotes.NVDA?.price).toBeCloseTo(199.99, 2);
+  expect(stale.freshness.quotes?.stale).toBe(true);
+
   const unexpected = errors.filter(
     (error) => !(error.includes("/api/stream") && error.includes("net::ERR_ABORTED")),
   );

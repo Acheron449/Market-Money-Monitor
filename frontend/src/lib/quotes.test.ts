@@ -25,12 +25,28 @@ const dashboard: Dashboard = {
 
 describe("mergeQuotes", () => {
   it("merges only the incoming symbols and keeps the rest", () => {
-    const tick: Quote = { ...baseQuote, price: 190.25, changePct: 2.75 };
+    const tick: Quote = {
+      ...baseQuote,
+      price: 190.25,
+      changePct: 2.75,
+      asOf: "2026-11-08T12:01:00Z",
+    };
     const merged = mergeQuotes(dashboard, { NVDA: tick });
 
     expect(merged?.quotes.NVDA?.price).toBe(190.25);
     expect(merged?.signals).toBe(dashboard.signals);
     expect(merged?.freshness.quotes).toEqual({ asOf: tick.asOf, stale: false });
+  });
+
+  it("keeps the stale flag when a tick replays last-good data", () => {
+    const replay: Quote = { ...baseQuote, asOf: "2026-11-08T11:00:00Z" };
+    const merged = mergeQuotes(dashboard, { NVDA: replay });
+
+    expect(merged?.quotes.NVDA?.asOf).toBe(replay.asOf);
+    expect(merged?.freshness.quotes).toEqual({
+      asOf: "2026-11-08T12:00:00Z",
+      stale: true,
+    });
   });
 
   it("uses the newest incoming asOf for quote freshness", () => {

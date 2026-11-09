@@ -103,6 +103,24 @@ uv run python scripts/load_test.py --url http://127.0.0.1:8010 \
 `--max-p95-ms` moves the budget. The E2E suite runs this command against the seeded server on port
 8010 and then re-checks the endpoint from a real browser.
 
+## Provider failure drill
+
+AC-03 and AC-04 are exercised against the seeded database by
+`backend/scripts/e2e_failure_drill.py`, which injects a provider fault instead of mocking a
+successful call:
+
+```bash
+cd backend
+uv run python scripts/e2e_failure_drill.py --mode fallback   # primary provider disabled
+uv run python scripts/e2e_failure_drill.py --mode outage     # every provider fails
+```
+
+`fallback` builds a two-provider quote chain, disables the primary through the same configuration
+the registry applies (`DISABLED_PROVIDERS`, or `disabled_providers` in `smm.yaml`), and runs one
+real ingest cycle: quotes are written by the fallback and each tile shows that source. `outage`
+fails every provider, proves the last-good quotes are kept, and ages them past the freshness window
+so the UI shows the stale badge without an error page. Neither mode touches the network.
+
 ## API
 
 | Method | Path | Purpose |
@@ -143,8 +161,8 @@ opt-in.
   and 10b5-1 badge with exclusion toggle, alerts to email/Telegram/webhook with persisted
   history, SEC insider/13F bulk backfills, and the daily second-provider insider cross-check:
   done.
-- **P6** — EDGAR Form 4 reconciliation (AC-01) and the NFR-01 load test (AC-05): done; failure
-  injection, accessibility scan and deployment: not started.
+- **P6** — EDGAR Form 4 reconciliation (AC-01), the NFR-01 load test (AC-05) and provider failure
+  injection (AC-03, AC-04): done; accessibility scan and deployment: not started.
 
 UI-14 is descoped for v1.0: the Advanced Charts licence fails for a personal dashboard in a public
 repository (ADR-003). UI-06 stays on Recharts and is the authoritative marker geometry.
