@@ -11,6 +11,11 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_WATCHLIST = ("NVDA", "AAPL", "TSLA", "AMZN", "META", "AMD", "PLTR", "COIN")
+DEFAULT_SEC_USER_AGENT = "Smart Money Monitor dev@example.com"
+
+
+class ProductionConfigError(RuntimeError):
+    """A production deployment is missing configuration it cannot safely default."""
 
 
 class Settings(BaseSettings):
@@ -18,9 +23,10 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
+    environment: str = "development"
     database_url: str = "sqlite+aiosqlite:///./smm.db"
 
-    sec_user_agent: str = "Smart Money Monitor dev@example.com"
+    sec_user_agent: str = DEFAULT_SEC_USER_AGENT
     sec_max_rps: float = 5.0
 
     alpaca_key_id: str = ""
@@ -117,6 +123,25 @@ def _read_yaml(path: Path) -> dict[str, object]:
         return {}
     loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
     return loaded if isinstance(loaded, dict) else {}
+
+
+def validate_settings(settings: Settings) -> None:
+    """Fail fast when a production container would start with unsafe defaults."""
+
+    if settings.environment.strip().lower() != "production":
+        return
+
+    problems: list[str] = []
+    user_agent = settings.sec_user_agent.strip()
+    if "@" not in user_agent or user_agent == DEFAULT_SEC_USER_AGENT:
+        problems.append("SEC_USER_AGENT must carry a real contact email")
+    if not settings.admin_token.strip():
+        problems.append("ADMIN_TOKEN must be set so watchlist writes stay authenticated")
+    if "*" in settings.parsed_cors_origins:
+        problems.append("CORS_ORIGINS must list explicit origins")
+
+    if problems:
+        raise ProductionConfigError("; ".join(problems))
 
 
 def load_runtime_config(settings: Settings) -> RuntimeConfig:

@@ -22,7 +22,7 @@ from app.api import (
     stream,
     watchlist,
 )
-from app.config import Settings, get_settings, load_runtime_config
+from app.config import Settings, get_settings, load_runtime_config, validate_settings
 from app.core.errors import ProviderError
 from app.core.logging import configure_logging
 from app.db.session import Database
@@ -36,6 +36,7 @@ LOGGER = logging.getLogger(__name__)
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved = settings or get_settings()
+    validate_settings(resolved)
     configure_logging(resolved.log_level)
     config = load_runtime_config(resolved)
 

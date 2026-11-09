@@ -50,6 +50,29 @@ consecutive failures, half-open after five minutes), every chain falls back in c
 every stored row records its `source`. If all providers fail, read endpoints keep serving last-good
 data with a stale flag.
 
+## Deployment
+
+The production stack is `ops/docker-compose.yml` (`api`, `web`, `db`); operations are documented in
+[`docs/RUNBOOK.md`](docs/RUNBOOK.md). Copy `ops/.env.example` to `ops/.env`, set `SEC_USER_AGENT` and
+`ADMIN_TOKEN` (Compose refuses to start without them), then:
+
+```bash
+docker compose -f ops/docker-compose.yml up -d --build
+```
+
+The API image runs `alembic upgrade head` before uvicorn starts, so an empty database volume is
+migrated on first boot, and `web` waits for the API's `/readyz` health check. nginx serves the
+hashed production bundle with SPA fallback and proxies `/api`, `/healthz`, `/readyz` and `/metrics`,
+so `http://localhost:3000/healthz` answers on the same origin as the dashboard.
+`ENVIRONMENT=production` makes the API fail fast when `SEC_USER_AGENT` lacks a contact email,
+`ADMIN_TOKEN` is empty, or `CORS_ORIGINS` contains a wildcard.
+
+CI builds both images and validates the Compose file. The deployed shape is also exercised without
+Docker: `cd frontend && pnpm smoke:deploy` builds the production bundle, applies migrations to an
+empty SQLite database, seeds the fixture data through the real ingest path, serves the bundle with
+the same proxied paths, and checks health, hashed assets, SPA fallback, the dashboard and the axe
+scan.
+
 ## SEC bulk backfill
 
 Historical SEC data sets are loaded from a local ZIP archive or an extracted directory; no provider
@@ -154,6 +177,7 @@ Response shapes are the TypeScript types in `docs/SRS.md` §7.2, mirrored in
 cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app && uv run pytest -q
 cd frontend && pnpm lint && pnpm typecheck && pnpm test -- --run && pnpm build
 cd frontend && pnpm a11y
+cd frontend && pnpm smoke:deploy
 ```
 
 Unit and contract tests run offline: HTTP is mocked at the adapter boundary or replayed from
@@ -174,7 +198,9 @@ opt-in.
   history, SEC insider/13F bulk backfills, and the daily second-provider insider cross-check:
   done.
 - **P6** — EDGAR Form 4 reconciliation (AC-01), the NFR-01 load test (AC-05), provider failure
-  injection (AC-03, AC-04) and the accessibility scan (AC-07): done; deployment: not started.
+  injection (AC-03, AC-04), the accessibility scan (AC-07) and deployment (production images,
+  migrations on start, health checks, runbook, smoke test): done; release notes and the v1.0 tag
+  remain.
 
 UI-14 is descoped for v1.0: the Advanced Charts licence fails for a personal dashboard in a public
 repository (ADR-003). UI-06 stays on Recharts and is the authoritative marker geometry.

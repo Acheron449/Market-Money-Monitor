@@ -333,6 +333,16 @@ synchronised burst; the run reports throughput and p50/p95/p99 latency and fails
 errors or p95 exceeds the 300 ms budget. `--think-time-ms 0 --ramp-ms 0` runs the same harness as a
 raw burst measurement. No provider credentials or network calls are involved.
 
+NFR-10 is met by `ops/docker-compose.yml` and `docs/RUNBOOK.md`. The API image applies
+`alembic upgrade head` in its entrypoint before uvicorn starts, so an empty PostgreSQL volume is
+migrated on first boot, and both containers declare health checks (`/readyz` for the API, the
+proxied `/healthz` for nginx). `ENVIRONMENT=production` makes start-up fail fast when
+`SEC_USER_AGENT` lacks a contact address, `ADMIN_TOKEN` is empty or `CORS_ORIGINS` is a wildcard.
+nginx serves the hashed bundle with SPA fallback and proxies `/api`, `/healthz`, `/readyz` and
+`/metrics`. CI builds both images and validates the Compose file; `pnpm smoke:deploy` runs the
+built bundle against a migrated, production-configured backend and checks health, hashed assets,
+SPA fallback, the dashboard and AC-07 in that shape.
+
 AC-01 is implemented as an offline snapshot rather than a second EDGAR fetch:
 `backend/scripts/reconcile_edgar.py` re-parses `backend/tests/fixtures/reconciliation/`, which holds
 five frozen Form 4 documents for each watchlist ticker plus the values EDGAR reports for them. The

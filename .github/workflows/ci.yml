@@ -51,3 +51,17 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test -- --run
       - run: pnpm build
+
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the API image
+        run: docker build --tag smm-api:ci backend
+      - name: Build the web image
+        run: docker build --tag smm-web:ci frontend
+      - name: Validate the production Compose file
+        env:
+          SEC_USER_AGENT: "Smart Money Monitor ci@example.com"
+          ADMIN_TOKEN: ci-admin-token
+        run: docker compose -f ops/docker-compose.yml config --quiet
